@@ -1,40 +1,36 @@
-# PLAZA demo deploy (Netlify + Tailscale Funnel)
+# Netlify static site (PLAZA frontend)
 
-Static frontend on Netlify, live API on menatech01 exposed via Tailscale Funnel.
+Static files only. The API lives on Fly.io (`plaza-pr-api`), data and auth on
+Supabase. See `docs/ARCHITECTURE.md` for the whole picture.
 
 ## URLs
-- Demo:      https://plaza-pr.netlify.app
-- Live API:  https://menatech01-1.tail706cb2.ts.net  (Funnel -> localhost:8200)
+- Landing:    https://plaza-pr.netlify.app/
+- Dashboard:  https://plaza-pr.netlify.app/app/   (search + Mi Lista)
+- B2B demo:   https://plaza-pr.netlify.app/negocios.html
+- API:        https://plaza-pr-api.fly.dev
 
-## How it works
-Netlify is static-only, so the frontend calls the API cross-origin:
-- `api/static/dashboard.html` sets `API` to the Funnel URL when the page is
-  served from `*.netlify.app`, else same-origin (local FastAPI).
-- FastAPI has CORSMiddleware(allow_origins=["*"]) so the Netlify origin is accepted.
-- Tailscale Funnel proxies public HTTPS -> localhost:8200 (the uvicorn API).
+## Files
+| Deployed file | Source of truth | Notes |
+|---|---|---|
+| `index.html` | this folder | landing page; also forwards magic-link `#access_token=…` to `/app/` |
+| `app/index.html` | `api/static/dashboard.html` | copy before deploying |
+| `negocios.html` | `api/static/negocios.html` | copy before deploying |
+| `_redirects`, `netlify.toml` | this folder | catch-all to landing; security headers |
 
-No Netlify proxy/rewrite is used (external-host proxying 502'd against the
-Funnel host); direct cross-origin + CORS is simpler and reliable.
+Pages pick their API base at runtime: on `*.netlify.app` (or `file:`) they call
+`https://plaza-pr-api.fly.dev` cross-origin (the API's CORS allows
+GET/POST/PATCH/DELETE); served by local FastAPI they call same-origin.
 
-## Redeploy frontend
+Magic links redirect to the site root, not `/app`. Netlify's `/app` → `/app/`
+301 drops the URL hash that carries the Supabase tokens.
+
+## Redeploy
 ```bash
-cp ~/pr-shopper-pipeline/api/static/dashboard.html ~/pr-shopper-pipeline/deploy/netlify/index.html
-cd ~/pr-shopper-pipeline/deploy/netlify
-netlify deploy --prod --dir=.
+cd ~/pr-shopper-pipeline
+cp api/static/dashboard.html deploy/netlify/app/index.html
+cp api/static/negocios.html  deploy/netlify/negocios.html
+cd deploy/netlify && netlify deploy --prod --dir=.
 ```
 
-## Funnel (API exposure)
-```bash
-# enable (persists in background):
-sudo tailscale funnel --bg --https=443 http://127.0.0.1:8200
-# status / disable:
-tailscale funnel status
-tailscale funnel --https=443 off
-```
-Note: Funnel exposes the API publicly. It is read-only (GET endpoints), but
-consider it public demo data. Disable with `funnel off` when the demo is done.
-
-## Backend
-The API runs as systemd user service `pr-shopper-api.service` (port 8200).
-The weekly scrape timer `pr-shopper-scrape.timer` keeps data fresh; the demo
-reflects new weeks automatically.
+Supabase Auth must list the site in its redirect allow-list
+(`https://plaza-pr.netlify.app/**`; site_url `https://plaza-pr.netlify.app`).

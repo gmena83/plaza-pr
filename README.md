@@ -38,7 +38,7 @@ menatech01 (workstation)                    Supabase (Postgres + Auth)
   notify_lists.py (Resend)        ^
        |                          |  read
        v                          |
-  nightly sqlite backup to mt03   |
+  nightly Postgres backup to mt03 |
                                   |
 Fly.io (plaza-pr-api)  -----------+   Netlify (static frontend)
   FastAPI read API + list CRUD  <---  landing / dashboard / negocios
@@ -150,12 +150,16 @@ docs/                       ARCHITECTURE, API, LEARNINGS
 - **Scrape timer**: `pr-shopper-scrape.timer` (Thu+Sun 06:00) → refresh.sh →
   run_weekly (writes to Supabase) → notify_lists.py (Thursday digest).
 - **Digest timer**: `pr-shopper-digest.timer` (Mon 07:30, Thu 11:00 fallback).
-- **Backup timer**: `pr-shopper-backup.timer` (nightly 03:30) → mt03
-  ~/backups/plaza-pr, 14-day retention.
+- **Backup timer**: `pr-shopper-backup.timer` (nightly 03:30) →
+  `deploy/backup_db.sh`: every Postgres table + auth user ids/emails as CSV,
+  schema files, verified row counts → mt03 `~/backups/plaza-pr/`, 14 days.
+  Prove an archive restores (rolled back, safe on prod):
+  `deploy/restore_db.py plaza-YYYYMMDD.tar.gz`; `--apply` restores into a
+  fresh database.
 - **Failure alerts**: OnFailure → pr-shopper-notify@.service → Telegram.
 - **Secrets**: one file, `.env.supabase` (gitignored, chmod 600): DB password,
-  DATABASE_URL, Resend key, Supabase service key. Both systemd units load it via
-  `EnvironmentFile=`, so rotating a key is a single edit. Fly secrets hold
+  DATABASE_URL, Resend key, Supabase service key. All three systemd units load
+  it via `EnvironmentFile=`, so rotating a key is a single edit. Fly secrets hold
   DATABASE_URL + Supabase URL/anon key.
 - **Public key**: the publishable key in dashboard.html can read price data
   but cannot write any table (see `normalize/schema_users_pg.sql`).

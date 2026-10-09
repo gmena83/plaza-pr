@@ -56,7 +56,9 @@ Read these first to understand or modify the system.
   3.6 GB image.
 - `deploy/*.service|*.timer` — systemd user units (scrape timer, digest timer,
   backup timer). The local API service is DISABLED (Fly serves the API).
-  Scrape + digest units load secrets via `EnvironmentFile=.env.supabase`.
+  Scrape, digest and backup units load secrets via `EnvironmentFile=.env.supabase`.
+- `deploy/backup_db.sh` — nightly Postgres → CSV + schema + manifest → mt03.
+- `deploy/restore_db.py` — restore check (rolled back) or `--apply` to a fresh DB.
 - `deploy/netlify/` — static site deploy (landing index.html, app/, negocios).
 - `.env.supabase` (gitignored, chmod 600) — DB password, DATABASE_URL, Resend
   key, service key. The single source for systemd; Fly has its own secrets.

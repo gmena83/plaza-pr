@@ -1,0 +1,11 @@
+[Unit]
+Description=PLAZA: nightly Postgres (Supabase) backup to mt03
+After=network-online.target
+OnFailure=pr-shopper-notify@%n.service
+
+[Service]
+Type=oneshot
+# DATABASE_URL (gitignored, chmod 600)
+EnvironmentFile=%h/pr-shopper-pipeline/.env.supabase
+ExecStart=%h/pr-shopper-pipeline/deploy/backup_db.sh
+TimeoutStartSec=600

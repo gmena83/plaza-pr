@@ -81,6 +81,24 @@ ALTER TABLE email_prefs ENABLE ROW LEVEL SECURITY;   -- no policies: API-only
 ALTER TABLE email_log   ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON email_prefs, email_log FROM anon, authenticated;
 
+-- ── B2B analytics events (/negocios) ────────────────────────────────────────
+-- Synthetic in beta (seed_b2b_demo.py, user_cohort 'demo-%'); the /api/b2b
+-- queries run unchanged once real events are logged.
+CREATE TABLE IF NOT EXISTS events (
+    id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ts            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    kind          TEXT NOT NULL,          -- search | view | list_add | ...
+    user_cohort   TEXT NOT NULL,          -- pseudonymous cohort, never a user id
+    product_norm  TEXT,
+    chain_slug    TEXT,
+    brand         TEXT,
+    meta          JSONB DEFAULT '{}'::jsonb
+);
+CREATE INDEX IF NOT EXISTS idx_events_ts    ON events(ts);
+CREATE INDEX IF NOT EXISTS idx_events_kind  ON events(kind);
+CREATE INDEX IF NOT EXISTS idx_events_brand ON events(brand);
+CREATE INDEX IF NOT EXISTS idx_events_chain ON events(chain_slug);
+
 -- ── lock down the public key ────────────────────────────────────────────────
 -- Supabase grants anon/authenticated full DML on every new public table by
 -- default. Price data is public-read but must not be writable with the key

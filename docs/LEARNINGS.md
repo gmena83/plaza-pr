@@ -215,3 +215,17 @@ fixed, or a non-obvious constraint discovered by probing the live sources.
 36. **mail-tester only reads DMARC from the exact From domain.** Receivers
     fall back to the parent domain's policy, but checkers flag "not fully
     authenticated" until the subdomain has its own `_dmarc` record.
+
+37. **Moving the database means moving the backup.** After the Postgres
+    cut-over the nightly job kept copying `db/shopper.db`. It still "succeeded"
+    every night, but that file no longer changes, and the user tables were
+    never in it. Check what a backup contains, not just its exit code. It now
+    dumps Postgres.
+
+38. **A backup isn't one until it has been restored.** The first restore test
+    found that `events` had no DDL in any schema file (it was created ad hoc)
+    and that alphabetical load order breaks foreign keys (`list_items` before
+    `lists`). `deploy/restore_db.py` restores into a throwaway schema inside a
+    transaction and rolls back, so it is safe to run against production. It
+    loads in FK order and resets identity sequences, otherwise new rows collide
+    with restored ids.
