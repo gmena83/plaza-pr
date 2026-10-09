@@ -7,14 +7,16 @@ Endpoints:
   GET /search?q=leche&chain=pueblo        -> matching current offers, best first
   GET /best/{product}                     -> best price per chain for a product term
   GET /offers?chain=selectos&limit=50     -> latest offers
+  GET/POST/DELETE /api/list*              -> user shopping lists (Supabase Auth bearer)
 """
-import sqlite3
+import os
 from pathlib import Path
 
-from fastapi import FastAPI, Query
+import requests as http_requests
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import JSONResponse
 
-from normalize import db
+from normalize import basket, db
 from scrapers.common import load_config
 
 app = FastAPI(title="PR Shopper Prices", version="0.1.0")
@@ -313,6 +315,87 @@ def recommendation(name: str, size: str | None = None):
     return {"product": name, "size": size,
             "recommendation": result.get("verdict"),
             "chain_patterns": result.get("chains", [])}
+
+
+# ─── user lists (Supabase Auth) ──────────────────────────────────────────────
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://blluhfmfslxpmacnqkox.supabase.co")
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
+
+
+def _auth_user(request: Request) -> dict | None:
+    """Validate the Supabase access token via the Auth API. Returns {id, email}."""
+    token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not token:
+        return None
+    try:
+        r = http_requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={"Authorization": f"Bearer {token}", "apikey": SUPABASE_ANON_KEY},
+            timeout=8)
+        if r.status_code == 200:
+            return r.json()
+    except http_requests.RequestException:
+        pass
+    return None
+
+
+def _require_user(request: Request) -> dict:
+    user = _auth_user(request)
+    if not user:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="login requerido")
+    return user
+
+
+def _ensure_list(c, user_id: str) -> int:
+    lid = basket.user_default_list_id(c, user_id)
+    if lid is None:
+        c.execute("INSERT INTO lists(user_id, name) VALUES(?, 'Mi lista')", (user_id,))
+        c.commit()
+        lid = basket.user_default_list_id(c, user_id)
+    return lid
+
+
+def _own_list(c, request: Request) -> tuple[dict, int]:
+    user = _require_user(request)
+    return user, _ensure_list(c, user["id"])
+
+
+@app.get("/api/list")
+def get_list(request: Request):
+    c = _conn()
+    user, lid = _own_list(c, request)
+    items = basket.list_items(c, lid)
+    result = basket.optimize(c, items) if items else {"items": [], "chains": [], "verdict": None}
+    result["email"] = user.get("email")
+    result["list_id"] = lid
+    return result
+
+
+@app.post("/api/list/items")
+def add_item(request: Request, product_norm: str, display_name: str = "",
+             size: str | None = None, any_size: bool = False,
+             target_price: float | None = None):
+    c = _conn()
+    _, lid = _own_list(c, request)
+    c.execute(
+        "INSERT INTO list_items(list_id, product_norm, size_canonical, any_size, display_name, target_price) "
+        "VALUES(?,?,?,?,?,?) "
+        "ON CONFLICT(list_id, product_norm, size_canonical) DO UPDATE SET "
+        "any_size=excluded.any_size, target_price=excluded.target_price",
+        (lid, product_norm, size, any_size, display_name or None, target_price))
+    c.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/list/items/{item_id}")
+def remove_item(request: Request, item_id: int):
+    c = _conn()
+    _, lid = _own_list(c, request)
+    c.execute("DELETE FROM list_items WHERE id = ? AND list_id = ?", (item_id, lid))
+    c.commit()
+    return {"ok": True}
 
 
 @app.exception_handler(Exception)

@@ -160,6 +160,30 @@
     </div>
   </div>
 
+  <div class="card" id="listcard" style="margin-top:20px">
+    <h2>Mi lista <span id="listuser" style="font-size:9px;color:var(--faint);text-transform:none;letter-spacing:0"></span> <span class="dot"></span></h2>
+    <div id="listbody" style="padding:14px 18px">
+      <div id="loginbox">
+        <div style="font-size:12px;color:var(--dim);margin-bottom:10px">
+          Entra con tu email para guardar tu lista de compras y recibir alertas de ofertas.</div>
+        <div style="display:flex;gap:10px;max-width:460px">
+          <input id="loginemail" placeholder="tu@email.com" style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--ink);font-family:var(--mono);font-size:13px;padding:10px 12px;outline:none">
+          <button onclick="sendMagicLink()" style="background:var(--sol);color:#000;border:none;font-family:var(--mono);font-weight:800;font-size:12px;padding:0 18px;cursor:pointer">ENTRAR</button>
+        </div>
+        <div id="loginmsg" style="font-size:11px;color:var(--mamey);margin-top:8px"></div>
+      </div>
+      <div id="listview" class="hidden">
+        <div class="reco hidden" id="basketverdict" style="margin-bottom:12px"></div>
+        <table id="listtable"><tbody></tbody></table>
+        <div id="chainrank" style="margin-top:10px"></div>
+        <div style="margin-top:12px;font-size:11px;color:var(--faint)">
+          Añade productos desde los resultados de búsqueda (botón +lista).
+          <a href="#" onclick="logout();return false" style="color:var(--dim)">salir</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="foot">
     <span>PLAZA · datos de shoppers públicos · actualización semanal (jue/dom)</span>
     <span id="stamp"></span>
@@ -265,7 +289,8 @@ function renderResults(){
       <td class="price">${money(r.price_sale)}</td>
       <td style="color:var(--sea);font-size:12px">${r.unit_price?uprice(r.unit_price)+' '+(r.price_basis||''):''}</td>
       <td style="color:var(--dim)">${esc(r.size_text||'')}</td>
-      <td class="sku">${esc(r.sku||'')}</td></tr>`).join('')
+      <td class="sku">${esc(r.sku||'')}</td>
+      <td onclick="event.stopPropagation()">${SESSION.token?`<button class="addbtn" onclick="addToList('${esc(r.product_norm)}','${esc(r.size_canonical||'')}','${esc((r.product_raw||'').replace(/'/g,''))}')">+lista</button>`:''}</td></tr>`).join('')
     : '<tr><td class="loading">sin resultados con esos filtros</td></tr>';
 }
 function clearFilters(){ $('#fchain').value=''; $('#fsize').value=''; renderResults(); }
@@ -419,7 +444,112 @@ async function drawHistory(q){
 
 $('#q').addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+// ─── auth + mi lista ────────────────────────────────────────────────────────
+const SB_URL = 'https://blluhfmfslxpmacnqkox.supabase.co';
+const SB_ANON = 'sb_publishable_khCOzFeZ4MOUz49skUyMvA_MEZzhjFe';
+const SESSION = {token: localStorage.getItem('plaza_token') || null,
+                 refresh: localStorage.getItem('plaza_refresh') || null,
+                 email: localStorage.getItem('plaza_email') || null};
+
+async function sb(path, opts={}){
+  const r = await fetch(SB_URL+path, {...opts, headers:{'apikey':SB_ANON,'Content-Type':'application/json',...(opts.headers||{})}});
+  return r;
+}
+async function apiAuth(path, opts={}){
+  const r = await fetch(API+path, {...opts, headers:{'Authorization':'Bearer '+SESSION.token,'Content-Type':'application/json',...(opts.headers||{})}});
+  if(r.status===401){ logout(); throw new Error('sesión expirada'); }
+  return r.json();
+}
+
+async function sendMagicLink(){
+  const email = $('#loginemail').value.trim();
+  if(!email.includes('@')){ $('#loginmsg').textContent='email inválido'; return; }
+  const r = await sb('/auth/v1/otp', {method:'POST', body:JSON.stringify({email, options:{emailRedirectTo: location.origin + location.pathname}})});
+  $('#loginmsg').textContent = r.ok ? '✓ te enviamos un enlace — revisa tu email (y spam)' : 'error enviando el enlace, intenta de nuevo';
+}
+
+function captureTokenFromUrl(){
+  const h = new URLSearchParams(location.hash.slice(1));
+  const at = h.get('access_token');
+  if(at){
+    SESSION.token = at;
+    SESSION.refresh = h.get('refresh_token');
+    localStorage.setItem('plaza_token', at);
+    if(SESSION.refresh) localStorage.setItem('plaza_refresh', SESSION.refresh);
+    history.replaceState(null,'',location.pathname+location.search);
+  }
+}
+
+async function refreshSession(){
+  if(!SESSION.refresh) return false;
+  const r = await sb('/auth/v1/token?grant_type=refresh_token', {method:'POST', body:JSON.stringify({refresh_token:SESSION.refresh})});
+  if(!r.ok) return false;
+  const d = await r.json();
+  SESSION.token = d.access_token; SESSION.refresh = d.refresh_token;
+  localStorage.setItem('plaza_token', d.access_token);
+  localStorage.setItem('plaza_refresh', d.refresh_token);
+  return true;
+}
+
+function logout(){
+  SESSION.token = SESSION.refresh = SESSION.email = null;
+  ['plaza_token','plaza_refresh','plaza_email'].forEach(k=>localStorage.removeItem(k));
+  $('#listview').classList.add('hidden');
+  $('#loginbox').classList.remove('hidden');
+  $('#listuser').textContent = '';
+  renderResults();
+}
+
+async function loadList(){
+  try{
+    const d = await apiAuth('/api/list');
+    SESSION.email = d.email; localStorage.setItem('plaza_email', d.email);
+    $('#listuser').textContent = '· ' + d.email;
+    $('#loginbox').classList.add('hidden');
+    $('#listview').classList.remove('hidden');
+    renderList(d);
+  }catch(e){
+    if(await refreshSession()) return loadList();
+    logout();
+  }
+}
+
+function renderList(d){
+  const v = d.verdict;
+  const bv = $('#basketverdict');
+  if(v){ bv.classList.remove('hidden');
+    bv.innerHTML = `<b>Canasta:</b> ${esc(v.message)} <span class="bn">✓</span>`;
+  } else { bv.classList.add('hidden'); }
+  $('#listtable').querySelector('tbody').innerHTML = d.items.length?
+    `<tr><th>producto</th><th>mejor precio</th><th>cadena</th><th></th></tr>`+
+    d.items.map(it=>`<tr>
+      <td>${esc(it.display_name||it.product_norm)}${it.size?` <span style="color:var(--faint);font-size:10px">${esc(it.size)}</span>`:''}</td>
+      <td class="price">${it.best?money(it.best.price_sale):'—'}${it.on_sale?' <span class="down">●</span>':''}</td>
+      <td style="color:${it.best?(COLORS[it.best.chain_slug]||'#e8eef2'):'#5a6b76'}">${it.best?it.best.chain_slug:'sin oferta'}</td>
+      <td><button class="clear" style="font-size:10px;padding:2px 8px" onclick="removeItem(${it.item_id})">✕</button></td>
+    </tr>`).join('')
+    : '<tr><td class="loading">lista vacía — busca productos y añádelos con +lista</td></tr>';
+  const rk = (d.chains||[]).filter(c=>c.found>0).slice(0,5);
+  $('#chainrank').innerHTML = rk.length? rk.map((c,i)=>
+    `<div class="bestline-row" style="border-left-color:${COLORS[c.chain]||'#2fd6a3'}">
+      ${i===0&&c.found===d.items.length?'<b>MEJOR CANASTA</b> · ':''}<b style="color:${COLORS[c.chain]||'#e8eef2'}">${c.chain}</b>:
+      $${c.total.toFixed(2)} <span style="color:var(--faint)">(${c.found}/${d.items.length} productos)</span></div>`).join('') : '';
+}
+
+async function addToList(norm, size, raw){
+  if(!SESSION.token){ $('#listcard').scrollIntoView({behavior:'smooth'}); return; }
+  await apiAuth('/api/list/items?product_norm='+encodeURIComponent(norm)+'&display_name='+encodeURIComponent(raw)+'&size='+encodeURIComponent(size||'')+(size?'':'&any_size=true'), {method:'POST'});
+  loadList();
+}
+async function removeItem(id){
+  await apiAuth('/api/list/items/'+id, {method:'DELETE'});
+  loadList();
+}
+
+captureTokenFromUrl();
 loadStats(); loadMovers();
+if(SESSION.token) loadList();
 </script>
 </body>
 </html>
