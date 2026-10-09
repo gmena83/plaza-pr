@@ -68,7 +68,11 @@ and the dashboard freshness badge shows staleness.
 ## Mi Lista email digest
 
 Every Monday and Thursday each user with list items gets one email, sent via
-Resend from `PLAZA <milista@plazapr.menatech.dev>` (subdomain verified: DKIM + SPF).
+Resend from `PLAZA <milista@plazapr.menatech.dev>` (subdomain verified: DKIM,
+SPF, DMARC `p=reject`; mail-tester 10/10). Replies go to `contact@menatech.dev`;
+the footer carries the postal address (410 Francisco Sein, San Juan, PR 00917).
+Both are defaults in `notify_lists.py`, overridable with `PLAZA_REPLY_TO` /
+`PLAZA_POSTAL_ADDRESS`.
 
 - **Headline:** the best 1- or 2-store plan for the list
   (`normalize/basket.store_plan`): "Walmart + Agranel cubren 3 de 6 productos",

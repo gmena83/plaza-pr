@@ -243,13 +243,15 @@ def build_digest(conn, list_id: int, *, today: dt.date | None = None,
 
 
 def render_digest(d: dict, *, unsubscribe_url: str, site_url: str,
-                  feedback_url: str = "", postal_address: str = "") -> tuple[str, str]:
+                  feedback_url: str = "", postal_address: str = "",
+                  can_reply: bool = False) -> tuple[str, str]:
     """-> (html, text)."""
     from jinja2 import Environment, FileSystemLoader, StrictUndefined
     env = Environment(loader=FileSystemLoader(TEMPLATES), undefined=StrictUndefined,
                       autoescape=lambda name: bool(name) and name.endswith(".html.j2"),
                       trim_blocks=True, lstrip_blocks=True)
     ctx = {**d, "mono": MONO, "unsubscribe_url": unsubscribe_url, "site_url": site_url,
-           "feedback_url": feedback_url, "postal_address": postal_address}
+           "feedback_url": feedback_url, "postal_address": postal_address,
+           "can_reply": can_reply}
     return (env.get_template("digest.html.j2").render(**ctx),
             env.get_template("digest.txt.j2").render(**ctx))

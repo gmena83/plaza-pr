@@ -202,3 +202,16 @@ fixed, or a non-obvious constraint discovered by probing the live sources.
     A value like `PLAZA <x@y>` works in systemd but is a redirection in bash.
     Keep the shared `.env.supabase` to plain `KEY=value` with no spaces or
     `<>`, and put such defaults in code.
+
+35. **Before dropping legacy tables in a reused Supabase project, check
+    triggers on `auth.users`.** The old conGenAI app had `on_auth_user_created`
+    → `handle_new_user()` → `INSERT INTO public.users`. Dropping `public.users`
+    alone would have made every PLAZA magic-link sign-up fail. Order: back up
+    (supabase db dump + CSV), drop the auth trigger (postgres can), drop the
+    tables in one statement (no CASCADE, so surprises error out), drop orphaned
+    functions, then prove sign-up still works with an admin `generate_link`
+    for a throwaway address.
+
+36. **mail-tester only reads DMARC from the exact From domain.** Receivers
+    fall back to the parent domain's policy, but checkers flag "not fully
+    authenticated" until the subdomain has its own `_dmarc` record.

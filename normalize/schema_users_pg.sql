@@ -2,6 +2,11 @@
 -- NOT by db.init_db (which only manages the price tables in schema_pg.sql).
 -- Idempotent: safe to re-run on an existing project.
 --
+-- The project previously hosted conGenAI; its 23 tables, 3 functions and the
+-- auth.users trigger on_auth_user_created were dropped on 2026-10-09
+-- (backup: ~/backups/congenai-20261009.tar.gz, copy on mt03 ~/backups/congenai/).
+-- `public` now holds only PLAZA objects.
+--
 -- Access model: the browser only ever talks to the Fly API (and to Supabase Auth
 -- for magic links). The API and the scraper connect as `postgres` through the
 -- pooler, which owns these tables and bypasses RLS. The public (anon) key that

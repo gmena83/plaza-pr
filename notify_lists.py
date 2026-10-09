@@ -10,7 +10,8 @@ Usage:
   notify_lists.py --after-scrape      called by refresh.sh right after run_weekly
 
 Env: DATABASE_URL, RESEND_API_KEY, RESEND_FROM (default PLAZA <milista@plazapr.menatech.dev>),
-     PLAZA_API_BASE (unsubscribe links), PLAZA_POSTAL_ADDRESS (footer, optional).
+     PLAZA_API_BASE (unsubscribe links), PLAZA_REPLY_TO (default contact@menatech.dev),
+     PLAZA_POSTAL_ADDRESS (footer, default 410 Francisco Sein, San Juan, PR 00917).
 
 Scheduling: refresh.sh sends Thursday's digest right after the Thursday scrape;
 pr-shopper-digest.timer sends Monday's and retries Thursday's later in the day
@@ -46,12 +47,12 @@ log = logging.getLogger("pr-shopper.notify")
 KIND = "list_digest"
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM = os.environ.get("RESEND_FROM", "PLAZA <milista@plazapr.menatech.dev>")
-REPLY_TO = os.environ.get("PLAZA_REPLY_TO", "")
+REPLY_TO = os.environ.get("PLAZA_REPLY_TO", "contact@menatech.dev")
 API_BASE = os.environ.get("PLAZA_API_BASE", "https://plaza-pr-api.fly.dev").rstrip("/")
 SITE = os.environ.get("PLAZA_SITE", "https://plaza-pr.netlify.app/app/")
 FEEDBACK = ("https://docs.google.com/forms/d/e/"
             "1FAIpQLScl3O3hQQ9HNRN0GeubG6_0bbMXV6LM4Zmw4mHNF4SeQidnQg/viewform")
-POSTAL = os.environ.get("PLAZA_POSTAL_ADDRESS", "")
+POSTAL = os.environ.get("PLAZA_POSTAL_ADDRESS", "410 Francisco Sein, San Juan, PR 00917")
 MIN_FRESH_CHAINS = int(os.environ.get("PLAZA_MIN_FRESH_CHAINS", "6"))
 MAX_CATCHUP_DAYS = 1
 SEND_INTERVAL_S = 0.6            # Resend default limit is 2 requests/second
@@ -253,7 +254,8 @@ def main(argv: list[str] | None = None) -> int:
 
         unsub = f"{API_BASE}/u/{u['unsub_token']}"
         html, text = digest.render_digest(d, unsubscribe_url=unsub, site_url=SITE,
-                                          feedback_url=FEEDBACK, postal_address=POSTAL)
+                                          feedback_url=FEEDBACK, postal_address=POSTAL,
+                                          can_reply=bool(REPLY_TO))
         if a.preview:
             out = Path(a.preview)
             out.mkdir(parents=True, exist_ok=True)

@@ -39,6 +39,8 @@ Abrir Mi Lista: {{ site_url }}
 --
 Recibes este resumen porque guardaste productos en Mi Lista de PLAZA. Llega lunes y jueves.
 Precios tomados de los shoppers públicos de cada cadena; pueden variar en tienda.
+{% if can_reply %}¿Dudas o sugerencias? Responde a este email.
+{% endif %}
 Dejar de recibir estos emails: {{ unsubscribe_url }}
 {% if feedback_url %}Comentarios: {{ feedback_url }}
 {% endif %}

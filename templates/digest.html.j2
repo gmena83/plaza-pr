@@ -99,7 +99,8 @@
   {# footer #}
   <tr><td class="px" style="padding:16px 24px 22px 24px;border-top:1px solid #232d36;font-family:{{ mono }};font-size:12px;line-height:1.65;color:#8fa1ad;">
     Recibes este resumen porque guardaste productos en Mi Lista de PLAZA. Llega lunes y jueves.
-    Precios tomados de los shoppers públicos de cada cadena; pueden variar en tienda.<br>
+    Precios tomados de los shoppers públicos de cada cadena; pueden variar en tienda.
+    {% if can_reply %}¿Dudas o sugerencias? Responde a este email.{% endif %}<br>
     <a href="{{ unsubscribe_url }}" style="color:#e8eef2;text-decoration:underline;">Dejar de recibir estos emails</a>
     {% if feedback_url %}&nbsp;&middot;&nbsp;<a href="{{ feedback_url }}" style="color:#e8eef2;text-decoration:underline;">Enviar comentarios</a>{% endif %}
     {% if postal_address %}<br>PLAZA &middot; {{ postal_address }}{% endif %}
