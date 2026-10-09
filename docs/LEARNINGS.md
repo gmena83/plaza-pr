@@ -154,3 +154,14 @@ fixed, or a non-obvious constraint discovered by probing the live sources.
     `site_url` + `uri_allow_list` via the Management API
     (`/config/auth`) or the OTP email lands users on localhost:3000.
     The publishable key (sb_publishable_*) is safe to ship in the frontend.
+
+28. **CORS `allow_methods=["GET"]` silently breaks every write from the browser.**
+    The read-only API was fine until list endpoints appeared: the browser's
+    preflight for POST/DELETE got `400` and the request never left the page.
+    The UI swallowed the error, so "+lista" looked dead. Server logs show it as
+    `OPTIONS ... 400`. Allow the write methods, and make the frontend show
+    API errors instead of failing quietly.
+
+29. **Netlify's `/app` → `/app/` 301 drops the URL hash**, which is where
+    Supabase puts the magic-link tokens. Point `emailRedirectTo` at the site
+    root and have the landing page forward `#access_token=…` to `/app/`.
