@@ -125,13 +125,36 @@
   .addbtn:focus-visible,.xbtn:focus-visible,.sizetog:focus-visible,.listchip:focus-visible{
     outline:2px solid var(--sea);outline-offset:2px}
   tr.inlist td:first-child{box-shadow:inset 3px 0 0 var(--mamey)}
-  .xbtn{width:24px;height:24px;font-size:12px}
+  .xbtn{width:24px;height:24px;font-size:11px;border-color:var(--panel2);color:var(--dim)}
   .xbtn:hover{border-color:var(--flam);color:var(--flam)}
-  .sizetog{font-family:var(--mono);font-size:10px;padding:2px 7px;margin-left:6px;
+  .sizetog{font-family:var(--mono);font-size:10px;padding:2px 7px;margin-left:8px;
     background:var(--panel2);color:var(--dim);border:1px solid var(--line);cursor:pointer;
-    vertical-align:1px}
-  .sizetog:hover{border-color:var(--sea);color:var(--ink)}
-  .sizetog.any{color:var(--sea);border-color:var(--sea)}
+    vertical-align:1px;line-height:1.4}
+  .sizetog::after{content:" ⇄";color:var(--faint)}
+  .sizetog:hover{border-color:var(--sol);color:var(--ink)}
+  .sizetog.any{color:var(--sol);border-color:var(--sol);background:transparent}
+  .sizetog.fixed{cursor:default}
+  .sizetog.fixed::after{content:""}
+  #listbody{padding:0}
+  #loginbox{padding:14px 18px}
+  #listview .reco{margin:14px 18px 4px}
+  .sublabel{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
+    font-weight:600;padding:14px 18px 8px;border-top:1px solid var(--line);margin-top:6px}
+  .rankrow{display:flex;gap:14px;align-items:baseline;padding:8px 18px;font-size:12px;
+    border-bottom:1px solid var(--panel2)}
+  .rankrow:last-child{border-bottom:none}
+  .rankrow .rc{font-weight:700;min-width:110px}
+  .rankrow .rt{color:var(--sol);font-weight:700;min-width:70px}
+  .rankrow .rf{color:var(--faint)}
+  .rankrow .win{color:#000;background:var(--mamey);font-size:9px;font-weight:800;
+    letter-spacing:.1em;padding:2px 6px}
+  .listhint{font-size:11px;color:var(--dim);padding:12px 18px 16px;border-top:1px solid var(--line)}
+  .listhint .chip{padding:0 5px;line-height:1.4}
+  .card>h2 .hgroup{display:flex;align-items:baseline;gap:10px}
+  .card>h2 .who{font-size:10px;color:var(--faint);text-transform:none;letter-spacing:0;font-weight:400}
+  .card>h2 .out{font-size:10px;color:var(--dim);text-transform:none;letter-spacing:0;
+    background:none;border:none;font-family:var(--mono);cursor:pointer;padding:0;text-decoration:underline}
+  .card>h2 .out:hover{color:var(--flam)}
   .listchip{margin-left:10px;font-family:var(--mono);font-size:10px;padding:3px 9px;
     background:none;border:1px solid var(--line);color:var(--dim);cursor:pointer;
     letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
@@ -204,8 +227,9 @@
   </div>
 
   <div class="card" id="listcard" style="margin-top:20px">
-    <h2>Mi lista <span id="listuser" style="font-size:9px;color:var(--faint);text-transform:none;letter-spacing:0"></span> <span class="dot"></span></h2>
-    <div id="listbody" style="padding:14px 18px">
+    <h2><span class="hgroup">Mi lista <span id="listuser" class="who"></span>
+      <button class="out hidden" id="logoutbtn" onclick="logout()">salir</button></span> <span class="dot"></span></h2>
+    <div id="listbody">
       <div id="loginbox">
         <div style="font-size:12px;color:var(--dim);margin-bottom:10px">
           Entra con tu email para guardar tu lista de compras y recibir alertas de ofertas.</div>
@@ -216,13 +240,12 @@
         <div id="loginmsg" style="font-size:11px;color:var(--mamey);margin-top:8px"></div>
       </div>
       <div id="listview" class="hidden">
-        <div class="reco hidden" id="basketverdict" style="margin-bottom:12px"></div>
+        <div class="reco hidden" id="basketverdict"></div>
         <table id="listtable"><tbody></tbody></table>
-        <div id="chainrank" style="margin-top:10px"></div>
-        <div style="margin-top:12px;font-size:11px;color:var(--faint)">
-          Busca un producto y toca <span class="chip">+</span> en su fila para guardarlo.
-          Toca el tamaño para comparar cualquier presentación.
-          <a href="#" onclick="logout();return false" style="color:var(--dim);margin-left:8px">salir</a>
+        <div id="chainrank"></div>
+        <div class="listhint">
+          Busca un producto arriba y toca <span class="chip">+</span> en su fila para guardarlo.
+          Toca el tamaño (⇄) para comparar cualquier presentación.
         </div>
       </div>
     </div>
@@ -596,6 +619,7 @@ function logout(){
   $('#listview').classList.add('hidden');
   $('#loginbox').classList.remove('hidden');
   $('#listuser').textContent = '';
+  $('#logoutbtn').classList.add('hidden');
   setList(null);
 }
 
@@ -609,6 +633,7 @@ async function loadList(){
   }
   SESSION.email = d.email; if(d.email) localStorage.setItem('plaza_email', d.email);
   $('#listuser').textContent = '· ' + (d.email||'');
+  $('#logoutbtn').classList.remove('hidden');
   $('#loginbox').classList.add('hidden');
   $('#listview').classList.remove('hidden');
   setList(d);
@@ -629,7 +654,7 @@ function renderList(d){
       const sz = it.size
         ? `<button class="sizetog${it.any_size?' any':''}" onclick="toggleAnySize(this,${it.item_id},${!it.any_size})"
              title="${it.any_size?'comparando cualquier presentación · toca para fijar '+esc(it.size):'solo '+esc(it.size)+' · toca para comparar cualquier presentación'}">${it.any_size?'cualquier tamaño':esc(it.size)}</button>`
-        : `<span class="sizetog any" style="cursor:default">cualquier tamaño</span>`;
+        : `<span class="sizetog any fixed">cualquier tamaño</span>`;
       const unit = it.best && it.best.unit_price
         ? ` <span style="color:var(--sea);font-size:11px;font-weight:400">${uprice(it.best.unit_price)} ${esc(it.best.price_basis||'')}</span>` : '';
       return `<tr>
@@ -639,11 +664,17 @@ function renderList(d){
       <td class="addcol"><button class="xbtn" onclick="removeItem(this,${it.item_id})" title="quitar" aria-label="quitar ${nm}">✕</button></td>
     </tr>`;}).join('')
     : '<tr><td class="loading">lista vacía · busca un producto arriba y toca + en su fila</td></tr>';
+  const n = d.items.length;
   const rk = (d.chains||[]).filter(c=>c.found>0).slice(0,5);
-  $('#chainrank').innerHTML = rk.length? rk.map((c,i)=>
-    `<div class="bestline-row" style="border-left-color:${COLORS[c.chain]||'#2fd6a3'}">
-      ${i===0&&c.found===d.items.length?'<b>MEJOR CANASTA</b> · ':''}<b style="color:${COLORS[c.chain]||'#e8eef2'}">${c.chain}</b>:
-      $${c.total.toFixed(2)} <span style="color:var(--faint)">(${c.found}/${d.items.length} productos)</span></div>`).join('') : '';
+  const full = rk.length && rk[0].found===n;
+  $('#chainrank').innerHTML = rk.length
+    ? `<div class="sublabel">${full?'Total por cadena esta semana':'Total por cadena · ninguna tiene toda tu lista'}</div>`+
+      rk.map((c,i)=>`<div class="rankrow">
+        <span class="rc" style="color:${COLORS[c.chain]||'#e8eef2'}">${c.chain}</span>
+        <span class="rt">${money(c.total)}</span>
+        <span class="rf">${c.found}/${n} productos${c.found<n?' · parcial':''}</span>
+        ${i===0&&c.found===n?'<span class="win">MEJOR CANASTA</span>':''}</div>`).join('')
+    : '';
 }
 
 async function addItem(norm, size, raw, anySize){
