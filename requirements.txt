@@ -11,3 +11,4 @@ vllm
 torch
 openai
 playwright
+psycopg2-binary>=2.9

@@ -39,7 +39,7 @@ def dashboard():
 
 
 def _conn():
-    c = db.connect(_cfg["db_path"])
+    c = db.connect(db.dsn_from_env(_cfg))
     db.init_db(c)
     return c
 

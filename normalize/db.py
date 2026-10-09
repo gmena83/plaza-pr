@@ -1,21 +1,37 @@
-"""SQLite persistence layer."""
+"""Persistence layer. SQLite (local default) or Postgres/Supabase (hosted).
+
+Backend is selected per call site:
+  db.connect(cfg["db_path"])                    -> SQLite file
+  db.connect(os.environ["DATABASE_URL"])        -> Postgres (dsn contains "://")
+Set DATABASE_URL in the environment to switch scraper/backfill/API to Postgres;
+leave it unset to keep the historical SQLite behaviour.
+"""
 import logging
+import os
 import sqlite3
 from pathlib import Path
 
 from . import units
-
-from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
 log = logging.getLogger("pr-shopper.db")
 
 SCHEMA = ROOT / "normalize" / "schema.sql"
+SCHEMA_PG = ROOT / "normalize" / "schema_pg.sql"
 
 
-def connect(db_path: str | Path) -> sqlite3.Connection:
-    p = Path(db_path)
+def _is_pg(path_or_dsn) -> bool:
+    return isinstance(path_or_dsn, str) and "://" in path_or_dsn
+
+
+def connect(path_or_dsn):
+    """SQLite path (str/Path) or Postgres DSN (contains '://')."""
+    if _is_pg(path_or_dsn):
+        from . import pg_compat
+        log.info("connecting to Postgres backend")
+        return pg_compat.connect(path_or_dsn)
+    p = Path(path_or_dsn)
     if not p.is_absolute():
         p = ROOT / p
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -24,8 +40,17 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     return conn
 
 
-def init_db(conn: sqlite3.Connection) -> None:
-    conn.executescript(SCHEMA.read_text())
+def dsn_from_env(cfg: dict) -> str:
+    """DATABASE_URL env wins; else the configured sqlite path."""
+    return os.environ.get("DATABASE_URL") or cfg["db_path"]
+
+
+def init_db(conn) -> None:
+    # Pick schema by connection type: CompatConnection wraps psycopg2.
+    if hasattr(conn, "_conn"):  # pg compat
+        conn.executescript(SCHEMA_PG.read_text())
+    else:
+        conn.executescript(SCHEMA.read_text())
     conn.commit()
 
 

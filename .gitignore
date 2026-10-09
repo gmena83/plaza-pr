@@ -18,3 +18,5 @@ deploy/netlify/.netlify/
 
 # OS
 .DS_Store
+supabase/
+.env*

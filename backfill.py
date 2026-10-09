@@ -81,7 +81,7 @@ def main():
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     cfg = load_config()
-    conn = db.connect(cfg["db_path"])
+    conn = db.connect(db.dsn_from_env(cfg))
     db.init_db(conn)
     for slug, name in NAMES.items():
         db.ensure_chain(conn, slug, name)

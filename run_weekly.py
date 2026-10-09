@@ -118,7 +118,7 @@ def main():
 
     with global_lock():
         cfg = load_config()
-        conn = db.connect(cfg["db_path"])
+        conn = db.connect(db.dsn_from_env(cfg))
         db.init_db(conn)
         db.sweep_stale_runs(conn)
         for slug, c in cfg["chains"].items():
