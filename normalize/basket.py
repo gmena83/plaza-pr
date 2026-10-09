@@ -28,8 +28,8 @@ def list_items(conn, list_id: int) -> list[dict]:
 def best_offers_for_item(conn, item: dict) -> list[dict]:
     """Best current offer per chain for one item (unit price preferred)."""
     params: list = [item["product_norm"]]
-    sql = ("SELECT chain_slug, product_raw, price_sale, unit_price, price_basis, "
-           "size_canonical, size_text, valid_from, valid_to "
+    sql = ("SELECT chain_slug, product_raw, price_sale, price_regular, promo, "
+           "unit_price, price_basis, size_canonical, size_text, valid_from, valid_to "
            "FROM offers WHERE product_norm = ? "
            "AND date('now') BETWEEN date(valid_from) AND date(valid_to)")
     if not item["any_size"] and item["size_canonical"]:
@@ -96,6 +96,65 @@ def optimize(conn, items: list[dict]) -> dict:
             "n_chains": len(offers),
         })
     return {"items": per_item_out, "chains": ranked, "verdict": verdict}
+
+
+def store_plan(items: list[dict], per_item: dict) -> dict | None:
+    """Best 1- or 2-store plan for a list.
+
+    per_item: {item_id: [best offer per chain, each with '_rank']}. Picks the
+    single chain covering the most items (cheapest on ties); if some pair of
+    chains covers strictly more, recommends the pair, assigning each item to
+    the cheaper of the two. Returns None when no item has a current offer.
+    """
+    from itertools import combinations
+
+    by_chain: dict = {}
+    for it in items:
+        for o in per_item.get(it["id"], []):
+            by_chain.setdefault(o["chain_slug"], {})[it["id"]] = o
+    if not by_chain:
+        return None
+
+    def evaluate(chains: tuple) -> dict:
+        assign, total, regular_saving = {}, 0.0, 0.0
+        for it in items:
+            cands = [by_chain[c][it["id"]] for c in chains if it["id"] in by_chain[c]]
+            if not cands:
+                continue
+            o = min(cands, key=lambda x: x["_rank"])
+            assign[it["id"]] = o
+            total += o["price_sale"] or 0
+            reg = o.get("price_regular")
+            if reg and o["price_sale"] and o["price_sale"] < reg < o["price_sale"] * 5:
+                regular_saving += reg - o["price_sale"]
+        return {"stores": list(chains), "covered": len(assign), "total": round(total, 2),
+                "regular_saving": round(regular_saving, 2), "assign": assign}
+
+    available = {iid for offers in by_chain.values() for iid in offers}
+    best_price = {iid: min(o["price_sale"] or 0 for o in per_item[iid]) for iid in available}
+
+    def key(p: dict) -> tuple:
+        # equal coverage -> compare what the WHOLE list costs: plan items at the
+        # plan's stores + the rest at their best price elsewhere. Comparing plan
+        # totals alone would reward pairs that happen to cover cheaper items.
+        rest = sum(best_price[i] for i in available - set(p["assign"]))
+        return (-p["covered"], round(p["total"] + rest, 2))
+
+    best_single = min((evaluate((c,)) for c in by_chain), key=key)
+    plan = best_single
+    if best_single["covered"] < len(items) and len(by_chain) > 1:
+        best_pair = min((evaluate(pair) for pair in combinations(sorted(by_chain), 2)), key=key)
+        if best_pair["covered"] > best_single["covered"]:
+            # list the store carrying more of the plan first
+            counts = {c: sum(1 for o in best_pair["assign"].values() if o["chain_slug"] == c)
+                      for c in best_pair["stores"]}
+            best_pair["stores"].sort(key=lambda c: -counts[c])
+            plan = best_pair
+
+    plan["n_items"] = len(items)
+    plan["elsewhere"] = sorted(available - set(plan["assign"]))   # on offer at a 3rd store
+    plan["unavailable"] = [it["id"] for it in items if it["id"] not in available]
+    return plan
 
 
 def user_default_list_id(conn, user_id: str) -> int | None:

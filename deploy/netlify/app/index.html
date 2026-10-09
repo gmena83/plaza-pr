@@ -150,6 +150,16 @@
     letter-spacing:.1em;padding:2px 6px}
   .listhint{font-size:11px;color:var(--dim);padding:12px 18px 16px;border-top:1px solid var(--line)}
   .listhint .chip{padding:0 5px;line-height:1.4}
+  .digestrow{padding-top:12px}
+  .digesttog{display:inline-flex;align-items:center;gap:10px;cursor:pointer;color:var(--dim)}
+  .digesttog input{position:absolute;opacity:0;width:1px;height:1px}
+  .digesttog .box{width:16px;height:16px;border:1px solid var(--line);display:inline-flex;
+    align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#000;flex:none}
+  .digesttog input:checked + .box{background:var(--mamey);border-color:var(--mamey)}
+  .digesttog input:checked + .box::before{content:"✓"}
+  .digesttog input:focus-visible + .box{outline:2px solid var(--sea);outline-offset:2px}
+  .digesttog:hover .box{border-color:var(--sol)}
+  .digesttog.busy{opacity:.45;pointer-events:none}
   .card>h2 .hgroup{display:flex;align-items:baseline;gap:10px}
   .card>h2 .who{font-size:10px;color:var(--faint);text-transform:none;letter-spacing:0;font-weight:400}
   .card>h2 .out{font-size:10px;color:var(--dim);text-transform:none;letter-spacing:0;
@@ -246,6 +256,10 @@
         <div class="listhint">
           Busca un producto arriba y toca <span class="chip">+</span> en su fila para guardarlo.
           Toca el tamaño (⇄) para comparar cualquier presentación.
+        </div>
+        <div class="listhint digestrow">
+          <label class="digesttog"><input type="checkbox" id="digesttog" onchange="toggleDigest(this)">
+            <span class="box"></span> Resumen por email lunes y jueves con las ofertas de tu lista</label>
         </div>
       </div>
     </div>
@@ -638,6 +652,7 @@ async function loadList(){
   $('#listview').classList.remove('hidden');
   setList(d);
   renderList(d);
+  $('#digesttog').checked = d.digest_enabled !== false;
   if(JUST_IN){ JUST_IN = false; toast(`<b>✓ entraste</b> como ${esc(d.email||'')}`); }
 }
 
@@ -731,6 +746,18 @@ async function removeItem(btn, id){
     await loadList();
     if(it) toast('quitado: '+esc((it.display_name||it.product_norm).slice(0,48)), {action:{label:'DESHACER', fn:undoAdd(it)}});
   }catch(e){ toast('no se pudo quitar: '+esc(e.message), {err:true}); btn.classList.remove('busy'); }
+}
+
+async function toggleDigest(cb){
+  const lbl = cb.closest('.digesttog'), want = cb.checked;
+  lbl.classList.add('busy');
+  try{
+    await apiAuth('/api/list/prefs?digest='+want, {method:'PATCH'});
+    toast(want ? '<b>✓ resumen activado</b> · lunes y jueves en tu email' : 'resumen por email desactivado');
+  }catch(e){
+    cb.checked = !want;
+    toast('no se pudo actualizar: '+esc(e.message), {err:true});
+  }finally{ lbl.classList.remove('busy'); }
 }
 
 async function flushPending(){

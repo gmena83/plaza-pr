@@ -1,0 +1,12 @@
+[Unit]
+Description=PLAZA Mi Lista email digest timer
+
+[Timer]
+# Monday digest. Thursday's is sent by refresh.sh right after the 06:00 scrape;
+# the Thursday 11:00 run is a fallback and no-ops if it already went out.
+OnCalendar=Mon *-*-* 07:30:00
+OnCalendar=Thu *-*-* 11:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

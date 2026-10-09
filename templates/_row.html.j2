@@ -1,0 +1,16 @@
+{% set badge_color = {'deal': '#2fd6a3', 'down': '#2fd6a3', 'wait': '#ffd400', 'soon': '#ff5a3c'} %}
+      <tr>
+        <td valign="top" style="padding:12px 12px 12px 15px;font-family:{{ mono }};{% if not last %}border-bottom:1px solid #1c252e;{% endif %}">
+          <div style="font-size:14px;line-height:1.35;font-weight:700;color:#e8eef2;">{{ r.name }}</div>
+          <div style="font-size:12px;line-height:1.5;color:#8fa1ad;padding-top:3px;">
+            {%- if show_chain %}<span style="color:{{ r.color }};font-weight:700;">{{ r.chain_short }}</span>&nbsp;&middot; {% endif -%}
+            {{ r.size }}
+            {%- for m in r.meta %}&nbsp;&middot; <span style="{% if m.style == 'warn' %}color:#ff5a3c;font-weight:700;{% endif %}">{{ m.text }}</span>{% endfor -%}
+          </div>
+          {% if r.badge %}
+          <div style="font-size:12px;line-height:1.4;font-weight:700;color:{{ badge_color[r.badge.kind] }};padding-top:6px;">{{ '&#9660;'|safe if r.badge.kind == 'down' else '&#9679;'|safe }} {{ r.badge.text }}</div>
+          {% endif %}
+        </td>
+        <td class="pr" valign="top" align="right" style="padding:12px 12px 12px 8px;font-family:{{ mono }};font-size:16px;font-weight:800;color:#ffd400;white-space:nowrap;{% if not last %}border-bottom:1px solid #1c252e;{% endif %}">${{ '%.2f'|format(r.price) }}
+          {%- if r.regular %}<div style="font-size:12px;font-weight:400;color:#8fa1ad;text-decoration:line-through;padding-top:3px;">${{ '%.2f'|format(r.regular) }}</div>{% endif %}</td>
+      </tr>

@@ -6,7 +6,9 @@ Read these first to understand or modify the system.
 - `run_weekly.py` — orchestrator. Weekly scrape of all enabled chains.
   Hardened (flock, stale sweep, per-chain isolation). The systemd timer calls
   `refresh.sh` which calls this, then `notify_lists.py` (user digests).
-- `notify_lists.py` — post-scrape Resend digest: basket verdict + deals per user.
+- `notify_lists.py` — Mi Lista email digest sender (Mon/Thu): recipients,
+  freshness guard, idempotent send via Resend, email_log, Telegram summary.
+  Content lives in `normalize/digest.py` + `templates/`.
 - `backfill.py` — one-time historical backfill from the CDN (see BACKFILL.md).
 - `api/main.py` — FastAPI app: public JSON endpoints, user list CRUD
   (Supabase bearer auth), B2B analytics. Hosted on Fly (plaza-pr-api).
@@ -34,9 +36,14 @@ Read these first to understand or modify the system.
 - `pg_compat.py` — sqlite-like wrapper over psycopg2 (placeholder translation,
   lastrowid emulation, dict rows). Touch carefully; learnings 24-25.
 - `cycle.py` — price-cycle/trend detection + buy recommendation verdicts.
-- `basket.py` — per-chain basket totals + cheapest-basket verdict for lists.
+- `reco.py` — per-product recommendation query + cycle.recommend; used by
+  `/api/recommendation` AND the email, so both give the same advice.
+- `basket.py` — per-chain basket totals + `store_plan` (best 1-/2-store plan).
+- `digest.py` — builds and renders the Mi Lista email (`templates/*.j2`).
 - `canonicalize.py` — conservative VL-typo fixes. Keep the map SHORT.
 - `schema.sql` / `schema_pg.sql` — SQLite / Postgres schemas + views.
+- `schema_users_pg.sql` — lists, list_items, email_prefs, email_log, RLS, and
+  the public-key write lockdown. Applied by hand (not by init_db); idempotent.
 
 ## Serving / deploy
 - `api/static/dashboard.html` — consumer frontend (open dashboard + Mi Lista
@@ -47,11 +54,12 @@ Read these first to understand or modify the system.
 - `fly.toml` + `Dockerfile` + `requirements-api.txt` — hosted API on Fly
   (dfw). Slim deps only — the full requirements.txt makes an undeployable
   3.6 GB image.
-- `deploy/*.service|*.timer` — systemd user units (scrape timer + backup
-  timer). The local API service is DISABLED (Fly serves the API).
+- `deploy/*.service|*.timer` — systemd user units (scrape timer, digest timer,
+  backup timer). The local API service is DISABLED (Fly serves the API).
+  Scrape + digest units load secrets via `EnvironmentFile=.env.supabase`.
 - `deploy/netlify/` — static site deploy (landing index.html, app/, negocios).
-- `.env.supabase` (gitignored, chmod 600) — DB password, Resend key, service key.
-  Also mirrored into the pr-shopper-scrape systemd drop-in and Fly secrets.
+- `.env.supabase` (gitignored, chmod 600) — DB password, DATABASE_URL, Resend
+  key, service key. The single source for systemd; Fly has its own secrets.
 
 ## Docs
 - `docs/ARCHITECTURE.md` — full design + data-flow diagram.

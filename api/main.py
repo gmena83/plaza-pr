@@ -276,44 +276,10 @@ def recommendation(name: str, size: str | None = None):
     price swings). Uses normalize.cycle for alternating-cycle / trend /
     volatility analysis and an overall buy_now / wait / buy_cheapest verdict.
     """
-    from normalize import cycle
-    c = _conn()
-    params: list = [name]
-    sql = ("SELECT chain_slug, size_canonical, valid_from AS week, "
-           "MIN(price_sale) AS price, MIN(unit_price) AS unit_price, "
-           "MIN(price_basis) AS price_basis "
-           "FROM offers WHERE product_norm = ? ")
-    if size:
-        sql += "AND (size_canonical = ? OR size_text = ?) "
-        params += [size, size]
-    sql += ("GROUP BY chain_slug, size_canonical, valid_from "
-            "ORDER BY chain_slug, size_canonical, valid_from")
-    rows = [dict(r) for r in c.execute(sql, params).fetchall()]
-    if not rows:
+    from normalize import reco
+    result = reco.product_recommendation(_conn(), name, size)
+    if result.get("_no_rows"):
         return {"product": name, "recommendation": None}
-
-    # pick the dominant (most-observed) chain+size series as the primary subject,
-    # but analyze every chain+size and let cycle.recommend pick the verdict.
-    points = [{"chain_slug": r["chain_slug"], "week": r["week"], "price": r["price"],
-               "unit_price": r["unit_price"], "price_basis": r["price_basis"],
-               "size": r["size_canonical"]} for r in rows]
-    # analyze per chain using its dominant size series
-    from collections import defaultdict
-    by_chain_size = defaultdict(list)
-    for p in points:
-        by_chain_size[(p["chain_slug"], p["size"] or "")].append(p)
-    # keep the size series with most weeks per chain
-    per_chain: dict = {}
-    for (chain, sz), pts in by_chain_size.items():
-        if chain not in per_chain or len(pts) > len(per_chain[chain]):
-            per_chain[chain] = pts
-    flat_points = []
-    for chain, pts in per_chain.items():
-        for p in sorted(pts, key=lambda x: x["week"]):
-            flat_points.append({"chain_slug": chain, "week": p["week"],
-                                "price": p["price"], "unit_price": p["unit_price"],
-                                "price_basis": p["price_basis"]})
-    result = cycle.recommend(flat_points)
     return {"product": name, "size": size,
             "recommendation": result.get("verdict"),
             "chain_patterns": result.get("chains", [])}
@@ -444,7 +410,111 @@ def get_list(request: Request):
     result = basket.optimize(c, items) if items else {"items": [], "chains": [], "verdict": None}
     result["email"] = user.get("email")
     result["list_id"] = lid
+    pref = c.execute("SELECT enabled FROM email_prefs WHERE user_id = ?", (user["id"],)).fetchone()
+    result["digest_enabled"] = pref["enabled"] if pref else True   # opt-in by default
     return result
+
+
+# ─── email preferences + unsubscribe ─────────────────────────────────────────
+
+@app.patch("/api/list/prefs")
+def update_prefs(request: Request, digest: bool):
+    c = _conn()
+    user = _require_user(request)
+    c.execute(
+        "INSERT INTO email_prefs(user_id, enabled, unsubscribed_at, reason) VALUES(?, ?, "
+        "CASE WHEN ? THEN NULL ELSE now() END, CASE WHEN ? THEN NULL ELSE 'toggle' END) "
+        "ON CONFLICT (user_id) DO UPDATE SET enabled = excluded.enabled, "
+        "unsubscribed_at = excluded.unsubscribed_at, reason = excluded.reason, updated_at = now()",
+        (user["id"], digest, digest, digest))
+    c.commit()
+    return {"ok": True, "digest_enabled": digest}
+
+
+def _unsub_page(title: str, body: str, form: str = "") -> HTMLResponse:
+    html = f"""<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>PLAZA · {title}</title>
+<style>body{{margin:0;background:#0b0e11;color:#e8eef2;font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace}}
+.w{{max-width:520px;margin:12vh auto;padding:0 20px}}.c{{background:#11161b;border:1px solid #232d36;padding:26px}}
+.l{{font-size:26px;font-weight:800;letter-spacing:-1px}}.l b{{color:#ffd400}}
+h1{{font-size:15px;margin:22px 0 10px}}p{{color:#8fa1ad;font-size:13px;line-height:1.6;margin:0 0 12px}}
+a{{color:#ffd400}}button{{background:#ffd400;color:#000;border:0;font-family:inherit;font-weight:800;
+font-size:12px;letter-spacing:.06em;padding:11px 18px;cursor:pointer}}
+button.ghost{{background:none;color:#8fa1ad;border:1px solid #232d36}}</style></head>
+<body><div class="w"><div class="c"><div class="l">PLA<b>ZA</b></div><h1>{title}</h1>{body}{form}</div></div></body></html>"""
+    return HTMLResponse(html)
+
+
+def _token_ok(c, token: str) -> dict | None:
+    if not token.isalnum() or len(token) > 80:
+        return None
+    return c.execute("SELECT enabled FROM email_prefs WHERE unsub_token = ?", (token,)).fetchone()
+
+
+def _set_unsub(c, token: str, enabled: bool, reason: str) -> bool:
+    if not token.isalnum() or len(token) > 80:
+        return False
+    row = c.execute(
+        "UPDATE email_prefs SET enabled = ?, updated_at = now(), "
+        "unsubscribed_at = CASE WHEN ? THEN NULL ELSE now() END, "
+        "reason = CASE WHEN ? THEN NULL ELSE ? END WHERE unsub_token = ? RETURNING user_id",
+        (enabled, enabled, enabled, reason, token)).fetchone()
+    c.commit()
+    return row is not None
+
+
+_BAD_LINK = ("Enlace no válido",
+             "<p>Este enlace no es válido. Puedes apagar los emails desde Mi Lista en "
+             "<a href='https://plaza-pr.netlify.app/app/'>PLAZA</a>.</p>")
+
+
+@app.get("/u/{token}", response_class=HTMLResponse)
+def unsubscribe_page(token: str):
+    """Footer link. GET only shows a one-button confirm page: mail security
+    scanners pre-open links, so a GET that unsubscribed would opt people out
+    without them clicking. Gmail/Yahoo's own button uses POST /u/{token}."""
+    pref = _token_ok(_conn(), token)
+    if not pref:
+        return _unsub_page(*_BAD_LINK)
+    if not pref["enabled"]:
+        return _unsub_page(
+            "Ya no recibes el resumen",
+            "<p>Tu lista sigue guardada en PLAZA.</p>",
+            f"<form method='post' action='/u/{token}/resubscribe'>"
+            "<button class='ghost'>VOLVER A RECIBIRLO</button></form>")
+    return _unsub_page(
+        "¿Dejar de recibir el resumen de Mi Lista?",
+        "<p>Te lo enviamos lunes y jueves con las ofertas de tu lista. "
+        "Tu lista seguirá guardada en PLAZA.</p>",
+        f"<form method='post' action='/u/{token}/confirm'><button>SÍ, DEJAR DE RECIBIRLO</button></form>")
+
+
+@app.post("/u/{token}/confirm", response_class=HTMLResponse)
+def unsubscribe_confirm(token: str):
+    if not _set_unsub(_conn(), token, False, "link"):
+        return _unsub_page(*_BAD_LINK)
+    return _unsub_page(
+        "Listo, no recibirás más resúmenes",
+        "<p>Tu lista sigue guardada en PLAZA; solo dejamos de enviarte el resumen de lunes y jueves.</p>",
+        f"<form method='post' action='/u/{token}/resubscribe'>"
+        "<button class='ghost'>ME EQUIVOQUÉ, VOLVER A RECIBIRLO</button></form>")
+
+
+@app.post("/u/{token}")
+def unsubscribe_one_click(token: str):
+    """RFC 8058 one-click unsubscribe (Gmail/Yahoo 'Unsubscribe' button)."""
+    _set_unsub(_conn(), token, False, "one_click")
+    return {"ok": True}
+
+
+@app.post("/u/{token}/resubscribe", response_class=HTMLResponse)
+def resubscribe(token: str):
+    if not _set_unsub(_conn(), token, True, ""):
+        return _unsub_page(*_BAD_LINK)
+    return _unsub_page("Suscripción reactivada",
+                       "<p>Volverás a recibir el resumen de Mi Lista los lunes y jueves. "
+                       "<a href='https://plaza-pr.netlify.app/app/'>Abrir PLAZA</a></p>")
 
 
 @app.post("/api/list/items")

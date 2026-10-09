@@ -16,9 +16,10 @@ LOG=data/run_$(date +%Y%m%d_%H%M%S).log
     done
   fi
   .venv/bin/python -m run_weekly "$@"
-  # post-scrape user digests (needs DATABASE_URL, RESEND_API_KEY, SUPABASE_SERVICE_KEY)
+  # Mi Lista email digest: sends on Thursday (Monday's goes out via
+  # pr-shopper-digest.timer); no-op on other days or if already sent
   if [ -n "${DATABASE_URL:-}" ] && [ -n "${RESEND_API_KEY:-}" ]; then
-    .venv/bin/python notify_lists.py || echo "notify_lists failed (non-fatal)"
+    .venv/bin/python notify_lists.py --after-scrape || echo "notify_lists failed (non-fatal)"
   fi
   echo "=== done $(date) ==="
 } >> "$LOG" 2>&1

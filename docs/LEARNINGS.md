@@ -165,3 +165,40 @@ fixed, or a non-obvious constraint discovered by probing the live sources.
 29. **Netlify's `/app` → `/app/` 301 drops the URL hash**, which is where
     Supabase puts the magic-link tokens. Point `emailRedirectTo` at the site
     root and have the landing page forward `#access_token=…` to `/app/`.
+
+## Email digest
+
+30. **The Supabase publishable key was a write key.** Supabase's default
+    privileges give `anon` full INSERT/UPDATE/DELETE on every new `public`
+    table, and RLS was off on the price tables, so anyone could delete
+    `offers` with the key in dashboard.html. Revoked writes on existing
+    tables *and* in `ALTER DEFAULT PRIVILEGES` (otherwise every new table
+    re-opens the hole). Probe with a DELETE on `id=eq.-999`: 401 is good,
+    204 means writable.
+
+31. **Unsubscribe links must not act on GET.** Outlook/Gmail/corporate
+    scanners pre-fetch links, so a GET that unsubscribes silently opts people
+    out. GET shows a one-button confirm page; the actual change is a POST.
+    The RFC 8058 `List-Unsubscribe-Post` header gives Gmail/Yahoo their own
+    one-click POST.
+
+32. **Single-store verdicts almost never fire on real lists.** Lists pin
+    exact products and sizes, so one chain rarely carries more than 2 of 6.
+    The digest recommends the best 1- *or* 2-store plan. Break coverage ties
+    on the cost of the whole list (plan stores + best price elsewhere for the
+    rest), not the plan subtotal, or pairs that skip the expensive item win.
+
+33. **Email HTML: tables, inline styles, and test at 390 px.**
+    - `display:block` on a `<table>` leaves its row shrink-wrapped. To get a
+      full-width mobile button, keep it a table at `width:100%` and make the
+      `<a>` block.
+    - Glue tokens with `&nbsp;` ("mié 21", "3 de 6") so phones don't split them.
+    - Put the struck-through old price under the sale price, not in the meta
+      line, where it reads as a unit price.
+    - Render previews headless (Playwright `set_content` + screenshot) before
+      sending; mail-tester.com gives SPF/DKIM/SpamAssassin results (10/10 here).
+
+34. **systemd `EnvironmentFile` and bash `source` disagree on special chars.**
+    A value like `PLAZA <x@y>` works in systemd but is a redirection in bash.
+    Keep the shared `.env.supabase` to plain `KEY=value` with no spaces or
+    `<>`, and put such defaults in code.

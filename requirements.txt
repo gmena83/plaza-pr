@@ -12,3 +12,4 @@ torch
 openai
 playwright
 psycopg2-binary>=2.9
+jinja2>=3.1

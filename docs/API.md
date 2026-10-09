@@ -64,20 +64,36 @@ Auth: Supabase magic-link. The frontend stores `access_token` /
 The API validates the token against `{SUPABASE_URL}/auth/v1/user`.
 
 - `GET /api/list` -> the caller's list with per-item best offer, per-chain
-  basket ranking, and `verdict` (cheapest full basket this week):
+  basket ranking, `verdict` (cheapest full basket this week) and
+  `digest_enabled` (Mi Lista email on/off, default true):
   ```
-  { email, list_id,
-    items: [{item_id, product_norm, display_name, size, target_price,
-             best: {chain_slug, price_sale, unit_price, price_basis, ...} | null,
+  { email, list_id, digest_enabled,
+    items: [{item_id, product_norm, display_name, size, any_size, target_price,
+             best: {chain_slug, price_sale, price_regular, promo, unit_price,
+                    price_basis, ...} | null,
              on_sale, n_chains}],
     chains: [{chain, total, found, coverage}],
     verdict: {chain, total, saving_vs_next, message} | null }
   ```
 - `POST /api/list/items?product_norm=N&display_name=D&size=S&any_size=B&target_price=T`
-  -> upsert one item (idempotent per list+product+size).
+  -> upsert one item (idempotent per list+product+size); returns
+  `{ok, item_id, count}`.
+- `PATCH /api/list/items/{item_id}?any_size=B&target_price=T&clear_target=B`
+  -> update one item.
 - `DELETE /api/list/items/{item_id}` -> remove (scoped to the caller's list).
+- `PATCH /api/list/prefs?digest=true|false` -> turn the Mon/Thu email on/off.
 
-Returns `401 {"detail":"login requerido"}` without a valid token.
+Returns `401 {"detail":"login requerido"}` without a valid token. The API
+caches a validated token for 60 s.
+
+## Email unsubscribe (no login; token from the email)
+
+- `GET /u/{token}` -> confirm page with one button. Opening the link alone
+  never unsubscribes (mail scanners pre-fetch links).
+- `POST /u/{token}/confirm` -> unsubscribe, page offers "volver a recibirlo".
+- `POST /u/{token}` -> RFC 8058 one-click unsubscribe (Gmail/Yahoo button,
+  advertised in the `List-Unsubscribe` header).
+- `POST /u/{token}/resubscribe` -> turn it back on.
 
 ## B2B analytics (public, synthetic data in beta)
 

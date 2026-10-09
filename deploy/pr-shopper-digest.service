@@ -1,0 +1,12 @@
+[Unit]
+Description=PLAZA Mi Lista email digest (Mon/Thu)
+After=network-online.target
+OnFailure=pr-shopper-notify@%n.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/pr-shopper-pipeline
+Environment=PYTHONPATH=%h/pr-shopper-pipeline
+# DATABASE_URL, RESEND_API_KEY, ... (gitignored, chmod 600; shared with the scrape unit)
+EnvironmentFile=%h/pr-shopper-pipeline/.env.supabase
+ExecStart=%h/pr-shopper-pipeline/.venv/bin/python notify_lists.py

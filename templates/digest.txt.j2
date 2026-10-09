@@ -1,0 +1,46 @@
+PLAZA · MI LISTA · {{ date_label }}
+
+{{ eyebrow|upper }}
+{{ headline }}
+{{ total_line }}
+{% if n_ending %}
+* {{ n_ending }} oferta{{ 's' if n_ending > 1 }} termina{{ 'n' if n_ending > 1 }} en los próximos 2 días
+{% endif %}
+{% for s in stores %}
+
+{% if stores|length > 1 %}{{ loop.index }} · {% endif %}{{ s.short|upper }} — ${{ '%.2f'|format(s.subtotal) }}
+{% for r in s.rows %}
+- {{ r.name }} ({{ r.size }}): ${{ '%.2f'|format(r.price) }}{% if r.regular %} (antes ${{ '%.2f'|format(r.regular) }}){% endif %}{% for m in r.meta %} · {{ m.text }}{% endfor %}
+
+{% if r.badge %}
+  > {{ r.badge.text }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% if elsewhere %}
+
+TAMBIÉN EN OFERTA, EN OTRA TIENDA
+{% for r in elsewhere %}
+- {{ r.name }} ({{ r.size }}): ${{ '%.2f'|format(r.price) }}{% if r.regular %} (antes ${{ '%.2f'|format(r.regular) }}){% endif %} en {{ r.chain_short }}{% for m in r.meta %} · {{ m.text }}{% endfor %}
+
+{% if r.badge %}
+  > {{ r.badge.text }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if unavailable %}
+
+SIN OFERTA ESTA SEMANA
+{{ unavailable|join(' · ') }}
+{% endif %}
+
+Abrir Mi Lista: {{ site_url }}
+
+--
+Recibes este resumen porque guardaste productos en Mi Lista de PLAZA. Llega lunes y jueves.
+Precios tomados de los shoppers públicos de cada cadena; pueden variar en tienda.
+Dejar de recibir estos emails: {{ unsubscribe_url }}
+{% if feedback_url %}Comentarios: {{ feedback_url }}
+{% endif %}
+{% if postal_address %}PLAZA · {{ postal_address }}
+{% endif %}
