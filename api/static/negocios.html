@@ -137,7 +137,7 @@ async function load(){
     return `<div class="funnel-step"><span>${KIND_ES[k]}</span><span class="num">${f.users}</span></div>`;
   }).join('');
 
-  const maxN = Math.max(...d.top_search.map?.() || d.top_searches.map(r=>r.n));
+  const maxN = Math.max(...d.top_searches.map(r=>r.n));
   $('#topsearch').querySelector('tbody').innerHTML =
     `<tr><th>término</th><th>búsquedas</th><th>usuarios</th></tr>` +
     d.top_searches.map(r=>`<tr><td>${esc(r.product_norm)}</td>
