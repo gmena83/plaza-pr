@@ -63,8 +63,8 @@ def main() -> None:
         for i in range(0, len(runs), BATCH):
             psycopg2.extras.execute_values(
                 cur,
-                f"INSERT INTO scrape_runs({','.join(RUN_COLS)}) VALUES %s "
-                "ON CONFLICT (id) DO NOTHING",
+                f"INSERT INTO scrape_runs({','.join(RUN_COLS)}) OVERRIDING SYSTEM VALUE "
+                "VALUES %s ON CONFLICT (id) DO NOTHING",
                 [tuple(r[c] for c in RUN_COLS) for r in runs[i:i+BATCH]])
     dst.commit()
     # reset identity sequence past the max migrated id

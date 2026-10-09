@@ -89,7 +89,7 @@ def best(product: str):
     c = _conn()
     term = f"%{product.strip().lower()}%"
     rows = c.execute(
-        "SELECT product_norm, MIN(price_sale) best_price, chain_slug "
+        "SELECT MIN(product_norm) AS product_norm, MIN(price_sale) AS best_price, chain_slug "
         "FROM offers WHERE product_norm LIKE ? "
         "AND date('now') BETWEEN date(valid_from) AND date(valid_to) "
         "GROUP BY chain_slug ORDER BY best_price ASC",
@@ -189,7 +189,7 @@ def best_unit(product: str):
     term = f"%{product.strip().lower()}%"
     rows = c.execute(
         """SELECT product_norm, chain_slug, base_unit,
-                  MIN(unit_price) AS best_unit_price, price_basis,
+                  MIN(unit_price) AS best_unit_price, MIN(price_basis) AS price_basis,
                   (SELECT product_raw FROM offers o2
                     WHERE o2.product_norm=o.product_norm AND o2.chain_slug=o.chain_slug
                       AND o2.unit_price IS NOT NULL
@@ -250,7 +250,7 @@ def product_history(name: str, size: str | None = None, chain: str | None = None
     c = _conn()
     params: list = [name]
     sql = ("SELECT chain_slug, valid_from AS week, MIN(price_sale) AS price, "
-           "MIN(unit_price) AS unit_price, price_basis "
+           "MIN(unit_price) AS unit_price, MIN(price_basis) AS price_basis "
            "FROM offers WHERE product_norm = ? ")
     if size:
         sql += "AND (size_canonical = ? OR size_text = ?) "
@@ -276,7 +276,8 @@ def recommendation(name: str, size: str | None = None):
     c = _conn()
     params: list = [name]
     sql = ("SELECT chain_slug, size_canonical, valid_from AS week, "
-           "MIN(price_sale) AS price, MIN(unit_price) AS unit_price, price_basis "
+           "MIN(price_sale) AS price, MIN(unit_price) AS unit_price, "
+           "MIN(price_basis) AS price_basis "
            "FROM offers WHERE product_norm = ? ")
     if size:
         sql += "AND (size_canonical = ? OR size_text = ?) "
