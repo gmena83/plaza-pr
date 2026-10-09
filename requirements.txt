@@ -1,0 +1,13 @@
+requests
+pyyaml
+beautifulsoup4
+lxml
+pdf2image
+pillow
+fastapi
+uvicorn[standard]
+pydantic
+vllm
+torch
+openai
+playwright

@@ -1,0 +1,13 @@
+[Unit]
+Description=Qwen3-VL server for PR shopper extraction
+After=network.target
+
+[Service]
+WorkingDirectory=%h/pr-shopper-pipeline
+Environment=PYTHONPATH=%h/pr-shopper-pipeline
+ExecStart=%h/pr-shopper-pipeline/serve_vl.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

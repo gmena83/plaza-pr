@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Data & database (large / regenerable)
+data/
+db/*.db
+db/*.db-shm
+db/*.db-wal
+
+# Logs
+*.log
+
+# Netlify local state
+deploy/netlify/.netlify/
+
+# OS
+.DS_Store

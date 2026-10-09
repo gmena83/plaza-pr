@@ -1,0 +1,74 @@
+# Puerto Rico supermarket chain sources.
+# type: structured = paginated JSON/HTML product endpoint
+#       pdf        = weekly PDF circular (image-only -> VL extraction)
+#       grid       = JS-driven grid on the shopper page (supermax)
+
+db_path: db/shopper.db
+data_dir: data
+
+vl:
+  model: cpatonn/Qwen3-VL-8B-Instruct-AWQ-4bit
+  serve_url: http://127.0.0.1:8100/v1
+  max_tokens: 6144
+  temperature: 0.0
+  dpi: 200
+
+chains:
+  pueblo:
+    name: Supermercados Pueblo
+    type: structured
+    base_url: https://www.puebloweb.com
+    products_endpoint: /controllers/products.html?type=shopper&page={page}&sort=name&query=&category_id=
+    page_param: page
+    max_pages: 60
+    shopper_page: https://www.puebloweb.com/shopper
+
+  amigo:
+    name: Supermercados Amigo
+    type: structured
+    base_url: https://apps.amigo.com
+    products_endpoint: /controllers/products.html?type=shopper&page={page}&sort=name&query=&category_id=
+    page_param: page
+    max_pages: 60
+    shopper_page: https://apps.amigo.com/shopper
+
+  selectos:
+    name: Supermercados Selectos
+    type: pdf
+    shopper_page: https://selectospr.com/shopper/
+    pdf_link_regex: 'wp-content/uploads/\d{4}/\d{2}/Shopper-[^"'']+\.pdf'
+
+  ralphs:
+    name: Ralph's Supermercado
+    type: structured
+    base_url: https://www.ralphsonline.com
+    products_endpoint: /controllers/products.html?type=shopper&page={page}&sort=name&query=&category_id=
+    page_param: page
+    max_pages: 60
+    shopper_page: https://www.ralphsonline.com/shopper
+
+  migente:
+    name: Supermercados Mi Gente
+    type: images
+    shopper_page: https://www.supermercadosmigente.com/shoppermigente
+
+  econo:
+    name: Supermercados Econo
+    type: browser_interactive
+    shopper_page: https://www.superecono.com/shopper/
+    render_wait_s: 8
+
+  agranel:
+    name: Supermercados Agranel
+    type: browser
+    shopper_page: https://www.facebook.com/supermercadosagranelpr
+    render_wait_s: 8
+    enabled: false  # Facebook automation is brittle + ToS-sensitive; opt-in
+
+  supermax:
+    name: SuperMax
+    type: pdf
+    dpi: 150
+    shopper_page: https://www.supermaxonline.com/super-especiales.html
+    # direct weekly PDF, cache-busted; resolved from shopper page if this 404s
+    pdf_url: https://www.supermaxonline.com/shopper.pdf

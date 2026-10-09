@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly PR shopper scrape timer
+
+[Timer]
+# Thursdays and Sundays at 06:00 (chains publish Wed/Thu)
+OnCalendar=Thu,Sun *-*-* 06:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
