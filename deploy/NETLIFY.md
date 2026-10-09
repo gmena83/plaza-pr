@@ -1,5 +1,7 @@
 # Netlify static site (PLAZA frontend)
 
+> Lives outside `deploy/netlify/` on purpose: everything in that folder is published.
+
 Static files only. The API lives on Fly.io (`plaza-pr-api`), data and auth on
 Supabase. See `docs/ARCHITECTURE.md` for the whole picture.
 

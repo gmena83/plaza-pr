@@ -59,7 +59,7 @@ Read these first to understand or modify the system.
   Scrape, digest and backup units load secrets via `EnvironmentFile=.env.supabase`.
 - `deploy/backup_db.sh` — nightly Postgres → CSV + schema + manifest → mt03.
 - `deploy/restore_db.py` — restore check (rolled back) or `--apply` to a fresh DB.
-- `deploy/netlify/` — static site deploy (landing index.html, app/, negocios).
+- `deploy/netlify/` — the published static site (landing index.html, app/, negocios). Every file in it is public; notes live in `deploy/NETLIFY.md`.
 - `.env.supabase` (gitignored, chmod 600) — DB password, DATABASE_URL, Resend
   key, service key. The single source for systemd; Fly has its own secrets.
 
