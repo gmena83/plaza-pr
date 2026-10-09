@@ -195,7 +195,7 @@ const COLORS = {pueblo:'#3aa6ff', amigo:'#ff5a3c', selectos:'#2fd6a3', supermax:
                 mrspecial:'#ff6fb1', agranel:'#9dff4f', freshmart:'#4fffc9', plazaloiza:'#d64fff'};
 // API base: same-origin when served by FastAPI locally; live backend when deployed static.
 const API = (location.hostname.endsWith('netlify.app') || location.protocol==='file:')
-  ? 'https://menatech01-1.tail706cb2.ts.net' : '';
+  ? 'https://plaza-pr-api.fly.dev' : '';
 const $ = s => document.querySelector(s);
 const money = v => v==null?'—':'$'+Number(v).toFixed(2);
 const uprice = v => v==null?'—':(v<1?'$'+Number(v).toFixed(3):'$'+Number(v).toFixed(2));

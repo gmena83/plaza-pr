@@ -1,0 +1,7 @@
+.venv/
+data/
+db/
+.git/
+__pycache__/
+*.log
+deploy/netlify/.netlify/

@@ -1,5 +1,5 @@
 app = "plaza-pr-api"
-primary_region = "mia"
+primary_region = "dfw"
 
 [build]
   dockerfile = "Dockerfile"
