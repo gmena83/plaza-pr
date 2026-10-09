@@ -1,9 +1,10 @@
 # API Reference
 
+Base URL (production): `https://plaza-pr-api.fly.dev`
 Base URL (local): `http://127.0.0.1:8200`
-Base URL (public demo): `https://menatech01-1.tail706cb2.ts.net`
 
-All endpoints are read-only GET. CORS is open (`allow_origins=["*"]`).
+Public endpoints are read-only GET. CORS is open (`allow_origins=["*"]`).
+List endpoints are authenticated (Supabase bearer token).
 Only offers where `valid_from <= today <= valid_to` appear in "current"
 endpoints; history endpoints span all weeks.
 
@@ -55,6 +56,35 @@ endpoints; history endpoints span all weeks.
   `v_price_history`), for the dashboard search chart.
 - `GET /api/movers?direction=down|up&limit=N` -> biggest week-over-week price
   movers (from `v_price_trend`). Empty until >=2 weeks of history exist.
+
+## User lists (authenticated)
+
+Auth: Supabase magic-link. The frontend stores `access_token` /
+`refresh_token` in localStorage and sends `Authorization: Bearer <token>`.
+The API validates the token against `{SUPABASE_URL}/auth/v1/user`.
+
+- `GET /api/list` -> the caller's list with per-item best offer, per-chain
+  basket ranking, and `verdict` (cheapest full basket this week):
+  ```
+  { email, list_id,
+    items: [{item_id, product_norm, display_name, size, target_price,
+             best: {chain_slug, price_sale, unit_price, price_basis, ...} | null,
+             on_sale, n_chains}],
+    chains: [{chain, total, found, coverage}],
+    verdict: {chain, total, saving_vs_next, message} | null }
+  ```
+- `POST /api/list/items?product_norm=N&display_name=D&size=S&any_size=B&target_price=T`
+  -> upsert one item (idempotent per list+product+size).
+- `DELETE /api/list/items/{item_id}` -> remove (scoped to the caller's list).
+
+Returns `401 {"detail":"login requerido"}` without a valid token.
+
+## B2B analytics (public, synthetic data in beta)
+
+- `GET /api/b2b/overview` -> `{synthetic:true, weekly_activity[], top_searches[],
+  brand_weekly[], chain_engagement[], funnel[]}` over the `events` table.
+- `GET /api/b2b/brand/{brand}` -> weekly attention, event-kind conversion,
+  and the brand's current real offers (price position).
 
 ## Notes for consumers
 - `unit_price` + `price_basis` give fair comparison (`$/lb`, `$/100ml`, `$/un`).

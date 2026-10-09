@@ -112,3 +112,45 @@ fixed, or a non-obvious constraint discovered by probing the live sources.
 20. **uv venvs don't ship pip.** Use `uv pip install --python .venv/bin/python`.
     And uv-managed Python 3.14 had no vLLM wheels — pin the project venv to
     Python 3.12.
+
+## Postgres / Supabase migration
+
+21. **SQLite's GROUP BY leniency hides bugs.** SQLite lets you select
+    non-aggregated columns outside GROUP BY (picks an arbitrary row); Postgres
+    17 errors. The API had four such queries (`price_basis`, `product_norm`).
+    Wrapping them in `MIN()` is safe when the column is constant per group.
+    Test every endpoint against Postgres before cutting over — 12 of 13
+    worked, the one that failed was the one we didn't smoke-test first.
+
+22. **Supabase pooler (Supavisor) only knows built-in roles.** Custom roles
+    (`plaza_reader`/`plaza_writer`) get `EAUTHQUERY user not found` through
+    the shared pooler no matter the grants. They work only on the direct
+    connection (which needs the paid IPv4 add-on; without it db.*.supabase.co
+    is IPv6-only and Fly can't reach it). For the beta we use the `postgres`
+    role through the pooler; revisit least-privilege once IPv4 provisions.
+
+23. **DB password resets don't propagate to the pooler instantly.** Two
+    resets failed auth for 5+ minutes each. The Management API's
+    `/database/query` endpoint runs SQL as `postgres` without the password —
+    that's how the schema/roles/grants were applied. (It still can't
+    ALTER ROLE postgres — Supabase's postgres isn't a superuser.)
+
+24. **psycopg2 RealDictCursor breaks on statements without a result set when
+    passed an empty params tuple** (IndexError). Pass `None` instead of `()`.
+    Also: emulating sqlite's `lastrowid` via auto-appended `RETURNING id`
+    must skip `ON CONFLICT` inserts (DO NOTHING returns zero rows).
+
+25. **`GENERATED ALWAYS AS IDENTITY` needs `OVERRIDING SYSTEM VALUE`** when
+    migrating explicit ids (scrape_runs) — plain INSERT fails. And reset the
+    sequence with setval afterwards.
+
+26. **Docker image size matters on Fly.** The full requirements.txt (torch,
+    vllm, playwright) built a 3.6 GB image that exceeded the 8 GB unpack
+    limit and deployed nothing. A slim `requirements-api.txt` (fastapi,
+    uvicorn, psycopg2, pyyaml, requests) deploys in minutes. Fly's `mia`
+    region is deprecated — use `dfw`.
+
+27. **Supabase magic-link needs the site URL allowlist first.** Set
+    `site_url` + `uri_allow_list` via the Management API
+    (`/config/auth`) or the OTP email lands users on localhost:3000.
+    The publishable key (sb_publishable_*) is safe to ship in the frontend.
