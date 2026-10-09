@@ -88,7 +88,8 @@ def optimize(conn, items: list[dict]) -> dict:
         best = offers[0] if offers else None
         per_item_out.append({
             "item_id": it["id"], "product_norm": it["product_norm"],
-            "display_name": it["display_name"], "size": it["size_canonical"],
+            "display_name": it["display_name"], "size": it["size_canonical"] or "",
+            "any_size": bool(it["any_size"]),
             "target_price": it["target_price"],
             "best": ({k: v for k, v in best.items() if k != "_rank"} if best else None),
             "on_sale": bool(best and it["target_price"] and best["price_sale"] <= it["target_price"]),

@@ -25,8 +25,10 @@ from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    # list endpoints need POST/PATCH/DELETE; GET-only made every preflight 400
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    max_age=86400,
 )
 _cfg = load_config()
 
@@ -383,18 +385,30 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://blluhfmfslxpmacnqkox.supa
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 
 
+_AUTH_CACHE: dict[str, tuple[float, dict]] = {}
+_AUTH_TTL = 60.0  # seconds; avoids a Supabase round-trip on every list click
+
+
 def _auth_user(request: Request) -> dict | None:
     """Validate the Supabase access token via the Auth API. Returns {id, email}."""
+    import time
     token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
     if not token:
         return None
+    hit = _AUTH_CACHE.get(token)
+    if hit and hit[0] > time.monotonic():
+        return hit[1]
     try:
         r = http_requests.get(
             f"{SUPABASE_URL}/auth/v1/user",
             headers={"Authorization": f"Bearer {token}", "apikey": SUPABASE_ANON_KEY},
             timeout=8)
         if r.status_code == 200:
-            return r.json()
+            user = r.json()
+            if len(_AUTH_CACHE) > 2000:
+                _AUTH_CACHE.clear()
+            _AUTH_CACHE[token] = (time.monotonic() + _AUTH_TTL, user)
+            return user
     except http_requests.RequestException:
         pass
     return None
@@ -439,12 +453,40 @@ def add_item(request: Request, product_norm: str, display_name: str = "",
              target_price: float | None = None):
     c = _conn()
     _, lid = _own_list(c, request)
-    c.execute(
+    # '' (not NULL) for "no size" so the UNIQUE constraint dedupes re-adds
+    row = c.execute(
         "INSERT INTO list_items(list_id, product_norm, size_canonical, any_size, display_name, target_price) "
         "VALUES(?,?,?,?,?,?) "
         "ON CONFLICT(list_id, product_norm, size_canonical) DO UPDATE SET "
-        "any_size=excluded.any_size, target_price=excluded.target_price",
-        (lid, product_norm, size, any_size, display_name or None, target_price))
+        "any_size=excluded.any_size, "
+        "display_name=COALESCE(excluded.display_name, list_items.display_name) "
+        "RETURNING id",
+        (lid, product_norm, size or "", any_size or not size, display_name or None,
+         target_price)).fetchone()
+    c.commit()
+    n = c.execute("SELECT COUNT(*) n FROM list_items WHERE list_id = ?", (lid,)).fetchone()
+    return {"ok": True, "item_id": row["id"] if row else None, "count": n["n"]}
+
+
+@app.patch("/api/list/items/{item_id}")
+def update_item(request: Request, item_id: int, any_size: bool | None = None,
+                target_price: float | None = None, clear_target: bool = False):
+    c = _conn()
+    _, lid = _own_list(c, request)
+    sets, params = [], []
+    if any_size is not None:
+        sets.append("any_size = ?")
+        params.append(any_size)
+    if target_price is not None:
+        sets.append("target_price = ?")
+        params.append(target_price)
+    elif clear_target:
+        sets.append("target_price = NULL")
+    if not sets:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="nada que actualizar")
+    c.execute(f"UPDATE list_items SET {', '.join(sets)} WHERE id = ? AND list_id = ?",
+              (*params, item_id, lid))
     c.commit()
     return {"ok": True}
 

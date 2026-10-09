@@ -36,6 +36,14 @@
   footer a{color:var(--dim);text-decoration:none}
   footer a:hover{color:var(--ink)}
 </style>
+<script>
+// Magic-link catch-all: if the Supabase OTP landed on the landing page,
+// forward the token hash to the dashboard (Netlify strips hashes on 301s,
+// so OTP links to /app lose the token; this catches root-landed tokens).
+if (location.hash.includes('access_token=')) {
+  location.replace('/app/' + location.hash);
+}
+</script>
 </head>
 <body>
 <div class="wrap">

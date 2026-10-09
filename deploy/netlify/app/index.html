@@ -16,7 +16,7 @@
        -webkit-font-smoothing:antialiased;padding:0 0 60px}
   .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
   header.top{display:flex;align-items:baseline;gap:16px;padding:26px 0 6px;
-    border-bottom:1px solid var(--line)}
+    border-bottom:1px solid var(--line);flex-wrap:wrap}
   .logo{font-size:30px;font-weight:800;letter-spacing:-1px}
   .logo b{color:var(--sol)}
   .tag{color:var(--dim);font-size:12px}
@@ -106,6 +106,48 @@
   .pricetable td{font-size:12px}
   .foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);
     color:var(--faint);font-size:11px;display:flex;justify-content:space-between}
+  /* ── mi lista controls: square shelf-tag toggles, same language as .clear/.chip ── */
+  .addcol{width:46px;text-align:right;padding-right:14px !important}
+  .addbtn,.xbtn{display:inline-flex;align-items:center;justify-content:center;
+    background:transparent;border:1px solid var(--line);color:var(--dim);
+    font-family:var(--mono);font-weight:700;line-height:1;cursor:pointer;
+    transition:border-color .12s,color .12s,background .12s}
+  .addbtn{width:30px;height:30px;font-size:16px}
+  .addbtn::before{content:"+"}
+  .addbtn:hover{border-color:var(--sol);color:var(--sol)}
+  .addbtn.saved{background:var(--mamey);border-color:var(--mamey);color:#000}
+  .addbtn.saved::before{content:"✓"}
+  .addbtn.saved:hover{background:transparent;border-color:var(--flam);color:var(--flam)}
+  .addbtn.saved:hover::before{content:"−"}
+  .addbtn.pending{border-style:dashed;border-color:var(--sol);color:var(--sol)}
+  .addbtn.pending::before{content:"…"}
+  .addbtn.busy,.xbtn.busy,.sizetog.busy{opacity:.45;pointer-events:none}
+  .addbtn:focus-visible,.xbtn:focus-visible,.sizetog:focus-visible,.listchip:focus-visible{
+    outline:2px solid var(--sea);outline-offset:2px}
+  tr.inlist td:first-child{box-shadow:inset 3px 0 0 var(--mamey)}
+  .xbtn{width:24px;height:24px;font-size:12px}
+  .xbtn:hover{border-color:var(--flam);color:var(--flam)}
+  .sizetog{font-family:var(--mono);font-size:10px;padding:2px 7px;margin-left:6px;
+    background:var(--panel2);color:var(--dim);border:1px solid var(--line);cursor:pointer;
+    vertical-align:1px}
+  .sizetog:hover{border-color:var(--sea);color:var(--ink)}
+  .sizetog.any{color:var(--sea);border-color:var(--sea)}
+  .listchip{margin-left:10px;font-family:var(--mono);font-size:10px;padding:3px 9px;
+    background:none;border:1px solid var(--line);color:var(--dim);cursor:pointer;
+    letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+  .listchip b{color:var(--sol);margin-left:4px}
+  .listchip:hover{border-color:var(--sol);color:var(--ink)}
+  .listchip + .clock{margin-left:14px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,14px);opacity:0;
+    background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--mamey);
+    color:var(--ink);font-size:12px;padding:12px 16px;display:flex;gap:16px;align-items:center;
+    z-index:60;transition:opacity .16s,transform .16s;pointer-events:none;
+    max-width:calc(100% - 32px)}
+  .toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+  .toast.err{border-left-color:var(--flam)}
+  .toast b{color:var(--mamey)}
+  .toast a{color:var(--sol);text-decoration:none;font-weight:700;white-space:nowrap}
+  #rescard,#listview{overflow-x:auto}
   .hidden{display:none}
   .loading{color:var(--dim);padding:18px;font-size:13px}
 </style>
@@ -116,6 +158,7 @@
     <div class="logo">PLA<b>ZA</b></div>
     <div class="tag">precios de shoppers · supermercados de Puerto Rico</div>
     <div class="fresh" id="fresh"></div>
+    <button class="listchip" id="listchip" onclick="goList()">mi lista · entrar</button>
     <div class="clock" id="clock"></div>
   </header>
 
@@ -177,8 +220,9 @@
         <table id="listtable"><tbody></tbody></table>
         <div id="chainrank" style="margin-top:10px"></div>
         <div style="margin-top:12px;font-size:11px;color:var(--faint)">
-          Añade productos desde los resultados de búsqueda (botón +lista).
-          <a href="#" onclick="logout();return false" style="color:var(--dim)">salir</a>
+          Busca un producto y toca <span class="chip">+</span> en su fila para guardarlo.
+          Toca el tamaño para comparar cualquier presentación.
+          <a href="#" onclick="logout();return false" style="color:var(--dim);margin-left:8px">salir</a>
         </div>
       </div>
     </div>
@@ -189,6 +233,8 @@
     <span id="stamp"></span>
   </div>
 </div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal-card">
@@ -282,18 +328,27 @@ function renderResults(){
   let rows = SEARCH.results;
   if(fc) rows = rows.filter(r=>r.chain_slug===fc);
   if(fs) rows = rows.filter(r=>(r.size_canonical===fs)||(r.size_text===fs));
+  const pend = pendingKeys();
   $('#restable').querySelector('tbody').innerHTML = rows.length?
-    `<tr><th>producto</th><th>cadena</th><th>precio</th><th>$/unidad</th><th>tamaño</th><th>sku</th></tr>`+
-    rows.map(r=>`<tr class="rowlink" onclick="openModal('${esc(r.product_norm)}','${esc(r.size_canonical||r.size_text||'')}')"><td>${esc(r.product_raw)}</td>
+    `<tr><th>producto</th><th>cadena</th><th>precio</th><th>$/unidad</th><th>tamaño</th><th>sku</th><th class="addcol">lista</th></tr>`+
+    rows.map(r=>{
+      const k = itemKey(r.product_norm, r.size_canonical);
+      const saved = LIST.keys.has(k), pending = !saved && pend.has(k);
+      const state = saved ? ' saved' : (pending ? ' pending' : '');
+      const label = saved ? 'quitar de mi lista' : 'añadir a mi lista';
+      return `<tr class="rowlink${saved?' inlist':''}" onclick="openRow(${r._i})"><td>${esc(r.product_raw)}</td>
       <td style="color:${COLORS[r.chain_slug]||'#e8eef2'};font-weight:700">${r.chain_slug}</td>
       <td class="price">${money(r.price_sale)}</td>
       <td style="color:var(--sea);font-size:12px">${r.unit_price?uprice(r.unit_price)+' '+(r.price_basis||''):''}</td>
       <td style="color:var(--dim)">${esc(r.size_text||'')}</td>
       <td class="sku">${esc(r.sku||'')}</td>
-      <td onclick="event.stopPropagation()">${SESSION.token?`<button class="addbtn" onclick="addToList('${esc(r.product_norm)}','${esc(r.size_canonical||'')}','${esc((r.product_raw||'').replace(/'/g,''))}')">+lista</button>`:''}</td></tr>`).join('')
+      <td class="addcol" onclick="event.stopPropagation()"><button class="addbtn${state}" data-i="${r._i}"
+        title="${label}" aria-label="${label}" aria-pressed="${saved}" onclick="toggleFromRow(this)"></button></td></tr>`;
+    }).join('')
     : '<tr><td class="loading">sin resultados con esos filtros</td></tr>';
 }
 function clearFilters(){ $('#fchain').value=''; $('#fsize').value=''; renderResults(); }
+function openRow(i){ const r = SEARCH.results[i]; if(r) openModal(r.product_norm, r.size_canonical||r.size_text||''); }
 
 async function doSearch(){
   const q = $('#q').value.trim(); if(q.length<2) return;
@@ -304,7 +359,7 @@ async function doSearch(){
     j('/api/best_unit/'+encodeURIComponent(q)),
     j('/api/filters?q='+encodeURIComponent(q)),
   ]);
-  SEARCH.results = data.results;
+  SEARCH.results = data.results.map((r,i)=>({...r, _i:i}));
   $('#fchain').innerHTML = '<option value="">todas las cadenas</option>'+
     filt.chains.map(c=>`<option value="${c}">${c}</option>`).join('');
   $('#fsize').innerHTML = '<option value="">todos los tamaños</option>'+
@@ -457,15 +512,57 @@ async function sb(path, opts={}){
   return r;
 }
 async function apiAuth(path, opts={}){
-  const r = await fetch(API+path, {...opts, headers:{'Authorization':'Bearer '+SESSION.token,'Content-Type':'application/json',...(opts.headers||{})}});
-  if(r.status===401){ logout(); throw new Error('sesión expirada'); }
-  return r.json();
+  const go = () => fetch(API+path, {...opts, headers:{'Authorization':'Bearer '+SESSION.token,...(opts.headers||{})}});
+  let r = await go();
+  // access tokens last ~1h: one silent refresh before giving up
+  if(r.status===401 && await refreshSession()) r = await go();
+  if(r.status===401){ logout(); throw new Error('tu sesión expiró, entra de nuevo'); }
+  const body = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(body.detail || body.error || ('error '+r.status));
+  return body;
 }
+
+// ─── list state shared by search rows, header chip and the Mi lista card ───
+const LIST = {items:[], keys:new Set(), byKey:new Map()};
+const itemKey = (norm, size) => (norm||'')+'|'+(size||'');
+let JUST_IN = false;
+
+function setList(d){
+  LIST.items = d ? d.items : [];
+  LIST.byKey = new Map(LIST.items.map(it=>[itemKey(it.product_norm, it.size), it]));
+  LIST.keys = new Set(LIST.byKey.keys());
+  updateChip();
+  if(SEARCH.results.length) renderResults();
+}
+function updateChip(){
+  $('#listchip').innerHTML = SESSION.token ? `mi lista<b>${LIST.items.length}</b>` : 'mi lista · entrar';
+}
+function goList(){
+  $('#listcard').scrollIntoView({behavior:'smooth', block:'start'});
+  if(!SESSION.token) setTimeout(()=>$('#loginemail').focus(), 400);
+}
+
+// items tapped while logged out survive the magic-link round trip
+const PENDING_KEY = 'plaza_pending';
+function getPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY)||'[]'); }catch(e){ return []; } }
+function setPending(a){ a.length ? localStorage.setItem(PENDING_KEY, JSON.stringify(a.slice(-50))) : localStorage.removeItem(PENDING_KEY); }
+function pendingKeys(){ return new Set(getPending().map(p=>itemKey(p.product_norm, p.size))); }
+
+let _toastT = null, _toastAct = null;
+function toast(html, o={}){
+  const t = $('#toast');
+  _toastAct = o.action ? o.action.fn : null;
+  t.className = 'toast show' + (o.err ? ' err' : '');
+  t.innerHTML = `<span>${html}</span>` +
+    (o.action ? `<a href="#" onclick="event.preventDefault();const f=_toastAct;hideToast();f&&f()">${o.action.label}</a>` : '');
+  clearTimeout(_toastT); _toastT = setTimeout(hideToast, o.ms || 3600);
+}
+function hideToast(){ $('#toast').classList.remove('show'); }
 
 async function sendMagicLink(){
   const email = $('#loginemail').value.trim();
   if(!email.includes('@')){ $('#loginmsg').textContent='email inválido'; return; }
-  const r = await sb('/auth/v1/otp', {method:'POST', body:JSON.stringify({email, options:{emailRedirectTo: location.origin + location.pathname}})});
+  const r = await sb('/auth/v1/otp', {method:'POST', body:JSON.stringify({email, options:{emailRedirectTo: location.origin + '/'}})});
   $('#loginmsg').textContent = r.ok ? '✓ te enviamos un enlace — revisa tu email (y spam)' : 'error enviando el enlace, intenta de nuevo';
 }
 
@@ -478,6 +575,7 @@ function captureTokenFromUrl(){
     localStorage.setItem('plaza_token', at);
     if(SESSION.refresh) localStorage.setItem('plaza_refresh', SESSION.refresh);
     history.replaceState(null,'',location.pathname+location.search);
+    JUST_IN = true;
   }
 }
 
@@ -498,21 +596,24 @@ function logout(){
   $('#listview').classList.add('hidden');
   $('#loginbox').classList.remove('hidden');
   $('#listuser').textContent = '';
-  renderResults();
+  setList(null);
 }
 
 async function loadList(){
-  try{
-    const d = await apiAuth('/api/list');
-    SESSION.email = d.email; localStorage.setItem('plaza_email', d.email);
-    $('#listuser').textContent = '· ' + d.email;
-    $('#loginbox').classList.add('hidden');
-    $('#listview').classList.remove('hidden');
-    renderList(d);
-  }catch(e){
-    if(await refreshSession()) return loadList();
-    logout();
+  let d;
+  try{ d = await apiAuth('/api/list'); }
+  catch(e){
+    // only a 401 logs out (inside apiAuth); a network blip must not
+    if(SESSION.token) toast('no se pudo cargar tu lista: '+esc(e.message), {err:true});
+    return;
   }
+  SESSION.email = d.email; if(d.email) localStorage.setItem('plaza_email', d.email);
+  $('#listuser').textContent = '· ' + (d.email||'');
+  $('#loginbox').classList.add('hidden');
+  $('#listview').classList.remove('hidden');
+  setList(d);
+  renderList(d);
+  if(JUST_IN){ JUST_IN = false; toast(`<b>✓ entraste</b> como ${esc(d.email||'')}`); }
 }
 
 function renderList(d){
@@ -522,14 +623,22 @@ function renderList(d){
     bv.innerHTML = `<b>Canasta:</b> ${esc(v.message)} <span class="bn">✓</span>`;
   } else { bv.classList.add('hidden'); }
   $('#listtable').querySelector('tbody').innerHTML = d.items.length?
-    `<tr><th>producto</th><th>mejor precio</th><th>cadena</th><th></th></tr>`+
-    d.items.map(it=>`<tr>
-      <td>${esc(it.display_name||it.product_norm)}${it.size?` <span style="color:var(--faint);font-size:10px">${esc(it.size)}</span>`:''}</td>
-      <td class="price">${it.best?money(it.best.price_sale):'—'}${it.on_sale?' <span class="down">●</span>':''}</td>
-      <td style="color:${it.best?(COLORS[it.best.chain_slug]||'#e8eef2'):'#5a6b76'}">${it.best?it.best.chain_slug:'sin oferta'}</td>
-      <td><button class="clear" style="font-size:10px;padding:2px 8px" onclick="removeItem(${it.item_id})">✕</button></td>
-    </tr>`).join('')
-    : '<tr><td class="loading">lista vacía — busca productos y añádelos con +lista</td></tr>';
+    `<tr><th>producto</th><th>mejor precio</th><th>cadena</th><th class="addcol"></th></tr>`+
+    d.items.map(it=>{
+      const nm = esc(it.display_name||it.product_norm);
+      const sz = it.size
+        ? `<button class="sizetog${it.any_size?' any':''}" onclick="toggleAnySize(this,${it.item_id},${!it.any_size})"
+             title="${it.any_size?'comparando cualquier presentación · toca para fijar '+esc(it.size):'solo '+esc(it.size)+' · toca para comparar cualquier presentación'}">${it.any_size?'cualquier tamaño':esc(it.size)}</button>`
+        : `<span class="sizetog any" style="cursor:default">cualquier tamaño</span>`;
+      const unit = it.best && it.best.unit_price
+        ? ` <span style="color:var(--sea);font-size:11px;font-weight:400">${uprice(it.best.unit_price)} ${esc(it.best.price_basis||'')}</span>` : '';
+      return `<tr>
+      <td>${nm}${sz}</td>
+      <td class="price">${it.best?money(it.best.price_sale):'—'}${unit}${it.on_sale?' <span class="down">●</span>':''}</td>
+      <td style="color:${it.best?(COLORS[it.best.chain_slug]||'#e8eef2'):'var(--faint)'};font-weight:${it.best?700:400}">${it.best?it.best.chain_slug:'sin oferta esta semana'}</td>
+      <td class="addcol"><button class="xbtn" onclick="removeItem(this,${it.item_id})" title="quitar" aria-label="quitar ${nm}">✕</button></td>
+    </tr>`;}).join('')
+    : '<tr><td class="loading">lista vacía · busca un producto arriba y toca + en su fila</td></tr>';
   const rk = (d.chains||[]).filter(c=>c.found>0).slice(0,5);
   $('#chainrank').innerHTML = rk.length? rk.map((c,i)=>
     `<div class="bestline-row" style="border-left-color:${COLORS[c.chain]||'#2fd6a3'}">
@@ -537,19 +646,80 @@ function renderList(d){
       $${c.total.toFixed(2)} <span style="color:var(--faint)">(${c.found}/${d.items.length} productos)</span></div>`).join('') : '';
 }
 
-async function addToList(norm, size, raw){
-  if(!SESSION.token){ $('#listcard').scrollIntoView({behavior:'smooth'}); return; }
-  await apiAuth('/api/list/items?product_norm='+encodeURIComponent(norm)+'&display_name='+encodeURIComponent(raw)+'&size='+encodeURIComponent(size||'')+(size?'':'&any_size=true'), {method:'POST'});
-  loadList();
+async function addItem(norm, size, raw, anySize){
+  const qs = 'product_norm='+encodeURIComponent(norm)+'&display_name='+encodeURIComponent(raw||'')+
+             (size ? '&size='+encodeURIComponent(size) : '')+(anySize ? '&any_size=true' : '');
+  const res = await apiAuth('/api/list/items?'+qs, {method:'POST'});
+  await loadList();
+  return res;
 }
-async function removeItem(id){
-  await apiAuth('/api/list/items/'+id, {method:'DELETE'});
-  loadList();
+const undoAdd = it => () => addItem(it.product_norm, it.size, it.display_name, it.any_size)
+  .catch(e=>toast('no se pudo deshacer: '+esc(e.message), {err:true}));
+
+async function toggleFromRow(btn){
+  const r = SEARCH.results[+btn.dataset.i]; if(!r) return;
+  const k = itemKey(r.product_norm, r.size_canonical);
+  const name = esc((r.product_raw||r.product_norm).slice(0,48));
+  if(!SESSION.token){
+    const p = getPending();
+    if(!p.some(x=>itemKey(x.product_norm, x.size)===k)){
+      p.push({product_norm:r.product_norm, size:r.size_canonical||'', display_name:r.product_raw||''});
+      setPending(p);
+    }
+    renderResults();
+    toast(`<b>${name}</b> se guardará en tu lista cuando entres`, {action:{label:'ENTRAR →', fn:goList}, ms:5200});
+    return;
+  }
+  const existing = LIST.byKey.get(k);
+  btn.classList.add('busy');
+  try{
+    if(existing){
+      await apiAuth('/api/list/items/'+existing.item_id, {method:'DELETE'});
+      await loadList();
+      toast(`quitado: ${name}`, {action:{label:'DESHACER', fn:undoAdd(existing)}});
+    } else {
+      const res = await addItem(r.product_norm, r.size_canonical, r.product_raw);
+      toast(`<b>✓ guardado</b> ${name} · ${res.count} en tu lista`, {action:{label:'VER LISTA', fn:goList}});
+    }
+  }catch(e){
+    toast('no se pudo guardar: '+esc(e.message), {err:true});
+  }finally{ btn.classList.remove('busy'); }
+}
+
+async function toggleAnySize(btn, id, val){
+  btn.classList.add('busy');
+  try{ await apiAuth('/api/list/items/'+id+'?any_size='+val, {method:'PATCH'}); await loadList(); }
+  catch(e){ toast('no se pudo actualizar: '+esc(e.message), {err:true}); btn.classList.remove('busy'); }
+}
+
+async function removeItem(btn, id){
+  btn.classList.add('busy');
+  const it = LIST.items.find(x=>x.item_id===id);
+  try{
+    await apiAuth('/api/list/items/'+id, {method:'DELETE'});
+    await loadList();
+    if(it) toast('quitado: '+esc((it.display_name||it.product_norm).slice(0,48)), {action:{label:'DESHACER', fn:undoAdd(it)}});
+  }catch(e){ toast('no se pudo quitar: '+esc(e.message), {err:true}); btn.classList.remove('busy'); }
+}
+
+async function flushPending(){
+  const p = getPending(); if(!p.length) return;
+  let ok = 0;
+  for(const x of p){
+    try{
+      await apiAuth('/api/list/items?product_norm='+encodeURIComponent(x.product_norm)+
+        '&display_name='+encodeURIComponent(x.display_name||'')+(x.size?'&size='+encodeURIComponent(x.size):''), {method:'POST'});
+      ok++;
+    }catch(e){ if(!SESSION.token) return; }
+  }
+  setPending([]);
+  if(ok){ JUST_IN = false; toast(`<b>✓ ${ok} producto${ok>1?'s':''}</b> guardado${ok>1?'s':''} en tu lista`, {action:{label:'VER LISTA', fn:goList}}); }
 }
 
 captureTokenFromUrl();
 loadStats(); loadMovers();
-if(SESSION.token) loadList();
+updateChip();
+if(SESSION.token) flushPending().then(()=>{ if(SESSION.token) loadList(); });
 </script>
 </body>
 </html>
