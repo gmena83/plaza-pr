@@ -31,16 +31,24 @@ class CompatCursor:
         self._cur = cur
         self._lastrowid = None
 
+    def _exec(self, sql, params):
+        # psycopg2 RealDictCursor.execute() with an empty tuple breaks on
+        # statements without a result set (IndexError); pass None instead.
+        self._cur.execute(sql, params if params else None)
+
     def execute(self, sql, params=None):
         sql_t = _translate(sql)
-        # emulate sqlite lastrowid for plain INSERTs
-        if re.match(r"\s*insert\s+into\s", sql_t, re.I) and "returning" not in sql_t.lower():
+        # emulate sqlite lastrowid for plain INSERTs (skip conflict-handled inserts:
+        # DO NOTHING can return zero rows, and callers there don't use lastrowid)
+        if (re.match(r"\s*insert\s+into\s", sql_t, re.I)
+                and "returning" not in sql_t.lower()
+                and "on conflict" not in sql_t.lower()):
             sql_t = sql_t.rstrip().rstrip(";") + " RETURNING id"
-            self._cur.execute(sql_t, params or ())
-            row = self._cur.fetchone()
+            self._exec(sql_t, params)
+            row = self._cur.fetchone() if self._cur.description else None
             self._lastrowid = row["id"] if row else None
         else:
-            self._cur.execute(sql_t, params or ())
+            self._exec(sql_t, params)
         return self
 
     def fetchall(self):

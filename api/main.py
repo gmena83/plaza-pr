@@ -317,6 +317,66 @@ def recommendation(name: str, size: str | None = None):
             "chain_patterns": result.get("chains", [])}
 
 
+# ─── B2B demo (synthetic data while in beta) ─────────────────────────────────
+
+@app.get("/api/b2b/overview")
+def b2b_overview():
+    """Aggregate user-activity metrics for brands/chains. Synthetic events
+    until real usage accumulates (same queries, real table)."""
+    c = _conn()
+    weekly = c.execute(
+        "SELECT to_char(date_trunc('week', ts), 'YYYY-MM-DD') AS week, kind, COUNT(*) n "
+        "FROM events GROUP BY 1, 2 ORDER BY 1").fetchall()
+    top_products = c.execute(
+        "SELECT product_norm, COUNT(*) n, COUNT(DISTINCT user_cohort) users "
+        "FROM events WHERE kind='search' AND product_norm IS NOT NULL "
+        "GROUP BY 1 ORDER BY n DESC LIMIT 15").fetchall()
+    brand_week = c.execute(
+        "SELECT to_char(date_trunc('week', ts), 'YYYY-MM-DD') AS week, brand, COUNT(*) n "
+        "FROM events WHERE brand IS NOT NULL AND kind IN ('search','list_add') "
+        "GROUP BY 1, 2 ORDER BY 1, n DESC").fetchall()
+    chain_engagement = c.execute(
+        "SELECT chain_slug, COUNT(*) clicks, COUNT(DISTINCT user_cohort) users "
+        "FROM events WHERE kind='offer_click' AND chain_slug IS NOT NULL "
+        "GROUP BY 1 ORDER BY clicks DESC").fetchall()
+    funnel = c.execute(
+        "SELECT kind, COUNT(DISTINCT user_cohort) users FROM events GROUP BY kind").fetchall()
+    return {
+        "synthetic": True,
+        "note": "datos sintéticos de demostración — se reemplazan con uso real",
+        "weekly_activity": [dict(r) for r in weekly],
+        "top_searches": [dict(r) for r in top_products],
+        "brand_weekly": [dict(r) for r in brand_week],
+        "chain_engagement": [dict(r) for r in chain_engagement],
+        "funnel": [dict(r) for r in funnel],
+    }
+
+
+@app.get("/api/b2b/brand/{brand}")
+def b2b_brand(brand: str):
+    """One brand: weekly attention, campaign lift, price position vs category."""
+    c = _conn()
+    attention = c.execute(
+        "SELECT to_char(date_trunc('week', ts), 'YYYY-MM-DD') AS week, COUNT(*) n, "
+        "COUNT(DISTINCT user_cohort) users "
+        "FROM events WHERE brand = ? GROUP BY 1 ORDER BY 1", (brand,)).fetchall()
+    conversion = c.execute(
+        "SELECT kind, COUNT(*) n FROM events WHERE brand = ? GROUP BY kind",
+        (brand,)).fetchall()
+    # real price position: brand's current offers vs category median
+    prices = c.execute(
+        "SELECT o.product_norm, o.chain_slug, o.price_sale, o.unit_price, o.price_basis "
+        "FROM offers o WHERE o.brand = ? "
+        "AND date('now') BETWEEN date(o.valid_from) AND date(o.valid_to) "
+        "ORDER BY o.product_norm, o.unit_price LIMIT 200",
+        (brand,)).fetchall()
+    return {"brand": brand,
+            "synthetic_events": True,
+            "attention_weekly": [dict(r) for r in attention],
+            "conversion": [dict(r) for r in conversion],
+            "current_prices": [dict(r) for r in prices]}
+
+
 # ─── user lists (Supabase Auth) ──────────────────────────────────────────────
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://blluhfmfslxpmacnqkox.supabase.co")
