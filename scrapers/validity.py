@@ -119,8 +119,8 @@ def from_image_vl(image_path, chain_slug: str, cfg: dict):
 
 
 def detect(chain: dict, chain_slug: str, cfg: dict, pdf_path=None,
-           image_path=None) -> tuple[str, str]:
-    """Best-effort validity for a chain; falls back to today..+6d."""
+           image_path=None, strict: bool = False) -> tuple[str, str]:
+    """Detect validity; strict circulars must have a plausible printed window."""
     try:
         ctype = chain["type"]
         if ctype == "structured":
@@ -134,10 +134,21 @@ def detect(chain: dict, chain_slug: str, cfg: dict, pdf_path=None,
             if not got and image_path is not None:
                 got = from_image_vl(image_path, chain_slug, cfg)
         if got:
+            if strict:
+                start, end = (date.fromisoformat(s) for s in got)
+                today = date.today()
+                if (end < today - timedelta(days=2) or
+                    start > today + timedelta(days=7) or
+                    not 0 <= (end - start).days <= 31):
+                    raise ValueError(f"implausible validity for {chain_slug}: {got}")
             log.info("[%s] validity detected: %s -> %s", chain_slug, got[0], got[1])
             return got
     except Exception as e:  # noqa: BLE001
+        if strict:
+            raise
         log.warning("[%s] validity detect failed: %s", chain_slug, e)
+    if strict:
+        raise ValueError(f"validity for {chain_slug} not detected; refusing to mark circular current")
     fb = _fallback()
     log.info("[%s] validity fallback: %s -> %s", chain_slug, fb[0], fb[1])
     return fb

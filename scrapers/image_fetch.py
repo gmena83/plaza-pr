@@ -6,6 +6,7 @@ local files to the VL extractor.
 import logging
 import re
 from pathlib import Path
+from PIL import Image
 
 from .common import ROOT, get, session
 
@@ -20,6 +21,15 @@ WIX_RX = re.compile(
 def _fullres(url: str) -> str:
     """Strip the /v1/... transform to get the original-resolution image."""
     return url.split("/v1/")[0]
+
+def circular_pages(paths: list[Path], min_aspect: float) -> list[Path]:
+    """Exclude wide site logos mixed into Wix's shopper image list."""
+    result = []
+    for path in paths:
+        with Image.open(path) as img:
+            if img.height / img.width >= min_aspect:
+                result.append(path)
+    return result
 
 
 def fetch_images(chain: dict, chain_slug: str, data_dir: str = "data/pages") -> list[Path]:
@@ -49,4 +59,8 @@ def fetch_images(chain: dict, chain_slug: str, data_dir: str = "data/pages") -> 
         r = get(u, sess=sess, timeout=60)
         p.write_bytes(r.content)
         paths.append(p)
+    if "min_page_aspect" in chain:
+        paths = circular_pages(paths, float(chain["min_page_aspect"]))
+        if not paths:
+            raise RuntimeError(f"no circular pages found on {chain['shopper_page']}")
     return paths

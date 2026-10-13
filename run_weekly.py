@@ -76,7 +76,8 @@ def run_chain(conn, cfg, slug: str) -> dict:
         elif ctype == "images":
             image_paths = image_fetch.fetch_images(chain, slug)
             valid_from, valid_to = validity.detect(
-                chain, slug, cfg, image_path=image_paths[0] if image_paths else None)
+                chain, slug, cfg, image_path=image_paths[0] if image_paths else None,
+                strict=(slug == "migente"))
             run_id = db.start_run(conn, slug, source, valid_from, valid_to)
             offers = extract_images(image_paths, slug, cfg)
         elif ctype == "browser":

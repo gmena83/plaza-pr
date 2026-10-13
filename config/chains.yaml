@@ -51,6 +51,7 @@ chains:
     name: Supermercados Mi Gente
     type: images
     shopper_page: https://www.supermercadosmigente.com/shoppermigente
+    min_page_aspect: 0.95  # Wix embeds two wide logos before the portrait circular pages
 
   econo:
     name: Supermercados Econo

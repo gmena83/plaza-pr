@@ -9,4 +9,6 @@ WorkingDirectory=%h/pr-shopper-pipeline
 Environment=PYTHONPATH=%h/pr-shopper-pipeline
 # DATABASE_URL, RESEND_API_KEY, ... (gitignored, chmod 600; shared with the scrape unit)
 EnvironmentFile=%h/pr-shopper-pipeline/.env.supabase
+ExecStartPre=%h/pr-shopper-pipeline/.venv/bin/python %h/pr-shopper-pipeline/deploy/wait_for_db.py
 ExecStart=%h/pr-shopper-pipeline/.venv/bin/python notify_lists.py
+TimeoutStartSec=480

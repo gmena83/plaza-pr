@@ -229,3 +229,17 @@ fixed, or a non-obvious constraint discovered by probing the live sources.
     transaction and rolls back, so it is safe to run against production. It
     loads in FK order and resets identity sequences, otherwise new rows collide
     with restored ids.
+
+39. **Persistent user timers can fire before Wi-Fi/DNS is ready.** A laptop
+    booted after the scheduled time; backup and digest both immediately failed
+    with a Supabase hostname resolution error. `After=network-online.target`
+    in the *user* manager did not gate on the system Wi-Fi. Both services now
+    run `deploy/wait_for_db.py` as a bounded DB-connect preflight before work.
+    Read the actual service journal, not only the timer's `active` state.
+
+40. **Wix image lists include branding before circular pages.** Mi Gente's
+    first two images are wide logos; asking the VL model for a date on the
+    first logo hallucinated April 2024. Configure `min_page_aspect` to retain
+    only portrait circular pages, then read the actual printed date on page 1.
+    Strict date validation fails the chain rather than inserting offers under
+    an implausible or made-up week. The October 2026 circular prints Oct 1–14.
