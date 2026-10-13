@@ -7,8 +7,18 @@ magic-link accounts, shopping lists, an opt-in email digest, and a constrained
 shopping assistant. The illustrated future-week projection is fictitious, not
 a validated forecast.
 
-**Live app:** https://plaza-pr.netlify.app (landing) · /app (dashboard) · /negocios.html (B2B demo)
+**Live app:** https://plaza-pr.netlify.app (landing) · /app/ (dashboard) · /negocios.html (B2B demo)
 **API:** https://plaza-pr-api.fly.dev
+
+The integrated demo was deployed on 2026-10-13. Netlify's site-wide visitor
+password was verified with unauthenticated HTTP 401 on `/` and `/app/`; it does
+**not** protect the public GitHub repository or the separate Fly API. The
+assistant and personal lists require a Supabase email magic-link account; the
+assistant additionally requires a completed shopping profile. The deployed
+frontend bytes match the API-served dashboard. A fresh magic-link sign-in
+through Netlify's visitor-password page still needs the owner's browser check;
+see `deploy/NETLIFY.md`. The working privacy-policy draft remains local and
+unpublished, and no real forecast has passed Sprint 5 validation.
 
 ## What it does
 
@@ -84,13 +94,13 @@ the footer carries the postal address (410 Francisco Sein, San Juan, PR 00917).
 Both are defaults in `notify_lists.py`, overridable with `PLAZA_REPLY_TO` /
 `PLAZA_POSTAL_ADDRESS`.
 
-- **Headline:** the best 1- or 2-store plan for the list
-  (`normalize/basket.store_plan`): "Walmart + Agranel cubren 3 de 6 productos",
-  estimated total, savings vs regular price.
-- **Per item:** price, unit price, old price, valid-until date, plus one advice
-  line: hit your target price, real deal vs its history (same cycle engine as
-  `/api/recommendation`), wait (it usually drops next week), rising, or dropped
-  vs its last circular.
+- **Headline:** the best 1- or 2-store plan for the saved list
+  (`normalize/basket.store_plan`): estimated total and item coverage for
+  *currently recorded offers*, not verified savings versus regular prices.
+- **Per item:** advertised price, normalized unit price when comparable,
+  previous recorded offer, valid-until date, and retrospective advice from
+  `/api/recommendation`. A historical cycle/"wait" heuristic is not a
+  prospectively validated forecast or a guarantee of next week's price.
 - Items on offer only at a third store, and items with no offer this week,
   are listed separately.
 - Off by default for new accounts; the "Resumen por email" checkbox in Mi
@@ -117,9 +127,11 @@ PYTHONPATH=. .venv/bin/python -m pytest tests -q                      # digest/s
 ## Repo layout
 
 ```
-api/main.py                 FastAPI: search/best/history/recommendation +
-                            list CRUD (Supabase bearer) + B2B analytics
-api/static/dashboard.html   consumer dashboard (open + Mi Lista behind login)
+api/main.py                 FastAPI: shopper search/history/recommendation,
+                            owner-scoped list/profile CRUD, assistant route
+api/assistant.py            constrained current-offer answers + list proposals
+api/static/dashboard.html   consumer dashboard (magic-link account, Mi Lista,
+                            fictional in-browser projection)
 api/static/negocios.html    B2B demo dashboard (synthetic-data badge)
 scrapers/
   common.py                 HTTP session, price/size parsers, config loader
@@ -141,9 +153,11 @@ normalize/
   digest.py                 Mi Lista email content + Jinja rendering
   canonicalize.py           conservative VL-typo canonicalization
   schema.sql / schema_pg.sql  SQLite / Postgres price schemas
-  schema_users_pg.sql       lists, email prefs/log, RLS, public-key lockdown
+  schema_users_pg.sql       lists, profiles, email prefs/log, RLS, grants
 templates/                  digest.html.j2 / _row.html.j2 / digest.txt.j2
-tests/                      pytest unit tests (store plan, digest helpers)
+tests/                      pytest API, accounts, assistant, UI and data checks
+spikes/001-pueblo-catalog/  read-only paired catalog/shopper study + evaluator
+spikes/002-pueblo-history/  local flyer archive/quality audit (not offers)
 run_weekly.py               hardened orchestrator (flock, stale-sweep, isolation)
 notify_lists.py             Mi Lista digest sender (Mon/Thu, Resend)
 seed_b2b_demo.py            synthetic events for the B2B demo
@@ -172,8 +186,10 @@ docs/                       ARCHITECTURE, API, LEARNINGS
   DATABASE_URL, Resend key, Supabase service key. All three systemd units load
   it via `EnvironmentFile=`, so rotating a key is a single edit. Fly secrets hold
   DATABASE_URL + Supabase URL/anon key.
-- **Public key**: the publishable key in dashboard.html can read price data
-  but cannot write any table (see `normalize/schema_users_pg.sql`).
+- **Publishable key**: the dashboard key alone (anonymous context) cannot
+  write price or account tables; authenticated owner-scoped list writes use a
+  verified bearer and RLS. Profile and email tables are API-only
+  (`normalize/schema_users_pg.sql`).
 
 ## Local development
 

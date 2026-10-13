@@ -68,10 +68,12 @@ fixed, or a non-obvious constraint discovered by probing the live sources.
     price, week) — those come from overlapping scrape pages (Econo home grid +
     10 category tabs produced 120 dup rows).
 
-12. **Unit price is the honest comparison.** Sticker price misleads across pack
-    sizes (a $16.97 family pack vs a $0.95/lb chicken breast). Parse sizes to a
-    base unit and compare $/lb, $/100ml, $/un. ~88% of offers parse; the rest
-    are count-only or unparsable and keep unit_price=NULL.
+12. **Unit price helps only after pack and price semantics are verified.**
+    Sticker price can mislead across sizes, but OCR and retailer labels can also
+    make a calculated $/lb fictitious: a meat offer advertised per pound with
+    a `23-27 Libras` range was divided by that range again. Compare only
+    matching products, sizes and trustworthy units; the assistant restricts
+    meat to explicit one-pound/per-pound labels and abstains otherwise.
 
 13. **Detect cycles on sticker price, grouped by (chain, product, size).**
     Corona stays $9.98 but its pack changes (6×12oz vs 12×7oz), swinging
@@ -162,9 +164,12 @@ fixed, or a non-obvious constraint discovered by probing the live sources.
     `OPTIONS ... 400`. Allow the write methods, and make the frontend show
     API errors instead of failing quietly.
 
-29. **Netlify's `/app` → `/app/` 301 drops the URL hash**, which is where
-    Supabase puts the magic-link tokens. Point `emailRedirectTo` at the site
-    root and have the landing page forward `#access_token=…` to `/app/`.
+29. **Netlify's `/app` → `/app/` 301 can drop a Supabase magic-link hash.**
+    The dashboard now sends `emailRedirectTo` to its exact slash-terminated
+    pathname (`/app/` on Netlify), avoiding that redirect; the landing page
+    still forwards tokens for older root-landed links. Password protection
+    adds a second redirect/challenge, so confirm a *fresh* magic link in a
+    protected browser before claiming the round trip works there.
 
 ## Email digest
 
@@ -243,3 +248,27 @@ fixed, or a non-obvious constraint discovered by probing the live sources.
     only portrait circular pages, then read the actual printed date on page 1.
     Strict date validation fails the chain rather than inserting offers under
     an implausible or made-up week. The October 2026 circular prints Oct 1–14.
+
+## Demo release and prediction boundaries
+
+41. **A shopper-specials feed is not a store inventory.** Grounded assistant
+    answers must include current offer dates, merchant and pack, qualify partial
+    coverage, compare only like sizes, and abstain when evidence is missing.
+    Count recorded product/size specials, not all merchant specials. Never use
+    the fictional chart or unreviewed flyer transcriptions as offer evidence.
+
+42. **Proposed list changes are not the change itself.** Require a complete
+    profile and a verified Supabase bearer before answering; return a proposed
+    add/remove/edit with `requires_confirmation`, then enforce ownership again
+    in the ordinary list endpoint after explicit selection and confirmation.
+    A frontend-only gate or a client-provided user ID is insufficient.
+
+43. **Protected static hosting needs separate checks.** Verify (a) published
+    file hashes, (b) unauthenticated password denial on both landing and app,
+    (c) authenticated live API/list behavior, and (d) a magic-link browser
+    round trip through the password gate. PLAZA passed the first three at the
+    2026-10-13 demo release, but the owner chose to test the fourth manually.
+    GitHub pushes do not auto-deploy this Netlify site; the password gate does
+    not protect GitHub or Fly's public read API. A marked invented projection
+    may ship for feedback while the separate prospective forecast gate remains
+    at one paired edition and zero held-out evaluation cutoffs.

@@ -191,9 +191,11 @@ Delivery rules:
   Supabase Auth (cached 60 s). List changes are owner-scoped even after the
   assistant proposes a confirmation. `profiles` has RLS and no direct anon
   SELECT or authenticated INSERT grant; the API uses its privileged DB role.
-- Netlify's visitor password is a separate site-access control that does not
-  protect Fly's public API. Enable it and verify a real challenge before
-  publishing the demo; public routes remain readable.
+- Netlify's site-wide visitor password was verified by unauthenticated HTTP
+  401 on `/` and `/app/` after the 2026-10-13 demo deploy. It is separate
+  from Supabase Auth and does not protect Fly's public read API or GitHub's
+  public source. Profile/assistant routes still enforce bearer authorization;
+  the protected-page magic-link round trip needs owner browser QA.
 - Secrets: `.env.supabase` on menatech01 (gitignored, chmod 600), loaded by
   every systemd unit through `EnvironmentFile=`; Fly secrets for the API.
 

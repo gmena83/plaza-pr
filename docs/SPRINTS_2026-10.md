@@ -18,12 +18,12 @@
 
 **Exit:** three structurally complete flyer captures and documented quality/matching limitations; **no-go for production ingestion or prediction on raw rows**. The three flyers cover promoted subsets only, not a month of every product's price. Defer manual curation until later ROI review.
 
-## Sprint 1 — Mobile trust and discovery (local first pass started)
+## Sprint 1 — Mobile trust and discovery (integrated demo deployed)
 
 **Goal:** useful 320–430px mobile search/list flows and visible source coverage before more features.
 
-- The mobile-first search/list, accessible controls and the signed-in conversational/profile UI are implemented in both dashboard copies. Browser QA exercised the onboarding and assistant layout at 320px and 375px with no page-level overflow; this does not substitute for checking the deployed app with real network behavior.
-- Continue: validate search, filters, per-product modal/history, list edits and errors one-handed on the protected live release, including slow connections, long names, Spanish labels and no-data states. Keep both dashboard copies byte-identical.
+- The mobile-first search/list, profile onboarding and conversational UI are deployed in both byte-identical dashboard copies. Local fixture QA covered signed-in onboarding/assistant layout at 320px and 375px; browser QA against the byte-identical Fly-served production dashboard exercised live observed-offer search and the fictional projection at 320px/375px with no page-level overflow. This does **not** prove a signed-in Netlify browser session through the visitor gate.
+- Continue: the owner will test a fresh magic-link round trip through the protected Netlify `/app/` page. Then validate signed-in search, filters, per-product modal/history, list edits and errors one-handed, including slow connections, long names, Spanish labels and no-data states.
 - Include coverage caveat for Walmart, freshness indicator and weekly validity; do not market historical predictions as already available.
 
 **Exit:** no page-level horizontal overflow; ≥44px touch targets; visible add/remove feedback; list/search/history reachable without long-scroll friction; human visual review of real mobile screenshots.
@@ -33,7 +33,7 @@
 **Goal:** owner-scoped lists, a completed-profile gate, and a tested account flow; password signup is a separate future Auth change.
 
 - The current and tested account flow is Supabase email magic links, not password signup. The live `/auth/v1/settings` check on 2026-10-13 returned `disable_signup=false`, `mailer_autoconfirm=true`; do **not** expose password signup until email confirmation, recovery, rate limits and existing-user compatibility are tested with throwaway accounts. Never store plaintext passwords in PLAZA's DB or browser.
-- `profiles` schema was migrated to the target database with RLS enabled, no `anon` SELECT grant, no `authenticated` INSERT grant, and `email_prefs.enabled` default false. `GET/PATCH /api/profile` and both dashboard copies now implement onboarding. A full profile means an authenticated account with ≥1 saved list item, ≥1 preferred chain and cadence; `/api/assistant` enforces it server-side. A temporary account exercised a magic-link login, profile completion, offer question and confirmed list edit locally, then was deleted. Recheck production after deployment.
+- `profiles` schema was migrated to the target database with RLS enabled, no `anon` SELECT grant, no `authenticated` INSERT grant, and `email_prefs.enabled` default false. `GET/PATCH /api/profile` and `/api/assistant` are deployed on Fly, and both dashboard copies implement onboarding. A full profile means an authenticated account with ≥1 saved list item, ≥1 preferred chain and cadence; `/api/assistant` enforces it server-side. A temporary account exercised magic-link login, profile completion, offer questions and confirmed list edit/remove against **live Fly**, followed by admin-user deletion and DB cleanup readback. Netlify's protected-page browser login remains for the owner to test.
 - Target-price editing, size matching and digest opt-in are independent; the assistant produces proposals, never automatic writes. The normal authenticated list endpoints enforce ownership after user confirmation.
 
 **Exit for this demo scope:** magic-link users retain owner-scoped lists, only the owner edits profile/list, and incomplete profiles can still use public search and Mi Lista. Password signup/recovery requires a later Auth decision and test.
@@ -61,7 +61,7 @@
 
 **Goal:** determine whether a shopping-timing estimate adds value beyond present-week deals.
 
-- The owner wants the **integrated PLAZA prototype** (both dashboard copies) to show a synthetic projection card directly after observed price history for ally/sponsor/investor feedback, rather than a separate demo page. Its fixed invented basket and week totals stay exclusively in browser code, not in `offers`, Mi Lista, analytics, or prediction evaluations. The card says **DATOS FICTICIOS** next to chart and result and explains it is not a validated forecast. A demo-only deployment is permitted by the owner's explicit 2026-10-13 release request, provided visitor password protection is verified before publishing the new Netlify UI. This does **not** waive the separate Sprint 5 gate for any real prediction. See `docs/PREDICTION_STUDY.md`.
+- The owner requested the **integrated PLAZA prototype** (both dashboard copies) show a synthetic projection card directly after observed price history for ally/sponsor/investor feedback, not a separate site. Fixed invented basket/week totals remain exclusively in browser code, outside `offers`, Mi Lista, analytics and prediction evaluation; **DATOS FICTICIOS** sits next to both chart and result. The demo-only release was published to Netlify on 2026-10-13 after the site-wide visitor-password challenge was verified on `/` and `/app/`. This **does not** waive the separate Sprint 5 gate for any real prediction. See `docs/PREDICTION_STUDY.md` and `deploy/NETLIFY.md` for the remaining owner-run protected-browser login check.
 
 - A **read-only Sprint 5 study is now active locally**: `spikes/001-pueblo-catalog/research.py` extends the paired snapshots across future editions, and `evaluate.py` scores last-observed/rolling-median item-price baselines in chronological order. The recurring user-systemd timer `deploy/pr-shopper-pueblo-research.{service,timer}` is enabled for Thu/Fri/Sun 11:00 AST; it first ran safely on 2026-10-13 and read back 1 complete paired edition, 0 evaluable cutoffs and `prediction_release_approved=false` in `data/catalog-pilots/study_evaluation.json`. See `docs/PREDICTION_STUDY.md` for scope, QA and abstention rules. The grid does **not** capture availability, per-item expiry or all merchant promotions; selective detail-page QA remains necessary before any basket/model evaluation.
 - Collect consecutive paired shopper **and full catalog** observations per chain/store/channel for the same SKU and unchanged pack, record availability and promo status. Archived flyers add advertised history but cannot fill missing regular-price observations. Instrument only the minimum needed to assess basket coverage (not commercial behavior before opt-in).
@@ -77,6 +77,7 @@ Validate demand with real shoppers and potential buyers for aggregate insights b
 
 ## Remaining human inputs at the appropriate gates
 
+- Demo release: the owner chose to test the protected Netlify `/app/` magic-link round trip personally, then profile completion, a grounded answer and one explicitly confirmed Mi Lista edit. Report any lost session without sharing token hashes or passwords. A successful API account test and HTTP 401 challenge do not establish this browser behavior.
 - Sprint 0: no further archive import decision is needed now; owner chose to keep it local until match quality/ROI improves.
 - Sprint 2: confirm cadence choices (weekly/biweekly/monthly) and which stores are selectable; confirm password-email templates and owner approval for production Auth config.
 - Sprint 4: set retention per data category, minimum cohort/report granularity, buyer categories, allowed category/region reporting, and exact deletion/export service process; provide counsel sign-off before publishing the policy. Menatech LLC and contact@menatech.dev are provided.
