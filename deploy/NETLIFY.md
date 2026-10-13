@@ -23,8 +23,35 @@ Pages pick their API base at runtime: on `*.netlify.app` (or `file:`) they call
 `https://plaza-pr-api.fly.dev` cross-origin (the API's CORS allows
 GET/POST/PATCH/DELETE); served by local FastAPI they call same-origin.
 
-Magic links redirect to the site root, not `/app`. Netlify's `/app` → `/app/`
-301 drops the URL hash that carries the Supabase tokens.
+Magic-link requests from `/app/` redirect to that exact slash-terminated
+pathname; root-landed legacy token links are forwarded by the landing page.
+Do not change `/app/` to `/app`: the slash redirect can drop the URL hash
+carrying Supabase tokens. Test a new magic link end to end after enabling site
+password protection; a challenge/redirect could affect the hash.
+
+## Demo release gate (visitor password)
+
+This Netlify site is deployed manually, not linked to GitHub builds. A GitHub
+push does **not** redeploy it. The owner will enable a visitor password for the
+entire site. Before `netlify deploy --prod`, verify that unauthenticated
+requests to `/` and `/app/` get a real password challenge, not HTTP 200.
+`password_context=all` without an active password is **not** protection.
+Never place a visitor password, Supabase keys or DB connection strings in
+this repo, deploy logs or chat. The Fly API does not inherit the site password;
+its assistant and profile routes require a valid magic-link session, and the
+assistant also requires completed profile.
+
+The integrated app includes observed specials and a clearly marked
+**DATOS FICTICIOS** browser-only illustration, not a validated forecast. The
+assistant is restricted to current recorded offers and confirmed list edits.
+The privacy-policy draft stays unpublished. Sprint 5 real-prediction validation
+is a separate release gate.
+
+Release order: test and review staging; commit/push GitHub; deploy and smoke-
+test Fly; verify Netlify's password challenge; production-deploy static files
+from this directory; read back the exact published deploy and challenge.
+For protected UI QA, use a signed-in browser session after the visitor-password
+prompt without printing/storing its value in scripts.
 
 ## Redeploy
 ```bash

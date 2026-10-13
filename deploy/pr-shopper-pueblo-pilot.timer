@@ -1,0 +1,13 @@
+[Unit]
+Description=One-off Pueblo pilot follow-up after the next shopper change
+
+[Timer]
+# Thursday after the regular scrape's 06:00 start; Friday fallback if unpublished/offline.
+OnCalendar=2026-10-15 09:00:00
+OnCalendar=2026-10-16 09:00:00
+Persistent=true
+AccuracySec=1min
+Unit=pr-shopper-pueblo-pilot.service
+
+[Install]
+WantedBy=timers.target

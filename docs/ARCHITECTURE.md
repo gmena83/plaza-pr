@@ -111,7 +111,11 @@ Prices:
 Users (all keyed by `auth.users.id` from Supabase Auth):
 - `lists`, `list_items` — a list item is a specific product (`product_norm`)
   and size, or any size (`any_size`), with an optional target price.
-- `email_prefs` — digest on/off (opt-in by default) and the unsubscribe token.
+- `profiles` — preferred chain slugs and cadence per Auth user, with `complete`
+  derived from these settings and an owned Mi Lista item. The assistant checks
+  completion server-side.
+- `email_prefs` — digest on/off (**off until explicit opt-in**) and unsubscribe
+  token.
 - `email_log` — one row per user per digest slot; `UNIQUE(user_id, kind,
   period)` is the double-send guard.
 
@@ -154,7 +158,8 @@ list, not the plan subtotal.
 
 ## Email digest (notify_lists.py + normalize/digest.py)
 
-Monday and Thursday, one email per user with list items. Spanish, PLAZA's
+Monday and Thursday, one email per explicitly opted-in user with list items.
+Spanish, PLAZA's
 dark monospace style, HTML (table layout, inline styles) + plain text, sent
 through Resend from `milista@plazapr.menatech.dev` (DKIM/SPF/DMARC aligned),
 replies to `contact@menatech.dev`.
@@ -182,7 +187,13 @@ Delivery rules:
   and nothing else: writes on every table are revoked, and so are the default
   privileges for future tables. `lists`/`list_items` also have owner-only RLS;
   `email_prefs`/`email_log` have RLS with no policies (API-only).
-- List endpoints validate the Supabase JWT against Supabase Auth (cached 60 s).
+- List/profile/assistant endpoints validate Supabase Auth bearer tokens against
+  Supabase Auth (cached 60 s). List changes are owner-scoped even after the
+  assistant proposes a confirmation. `profiles` has RLS and no direct anon
+  SELECT or authenticated INSERT grant; the API uses its privileged DB role.
+- Netlify's visitor password is a separate site-access control that does not
+  protect Fly's public API. Enable it and verify a real challenge before
+  publishing the demo; public routes remain readable.
 - Secrets: `.env.supabase` on menatech01 (gitignored, chmod 600), loaded by
   every systemd unit through `EnvironmentFile=`; Fly secrets for the API.
 
@@ -218,12 +229,13 @@ and `auth_users.csv` maps old ids to emails for re-owning their lists.
 
 ## Hosting & failure modes
 
-- **Netlify** serves static files only (`deploy/netlify/`). Pages on
-  `*.netlify.app` call `https://plaza-pr-api.fly.dev` cross-origin; served
-  locally by FastAPI they call same-origin.
+- **Netlify** serves static files only (`deploy/netlify/`), manually deployed.
+  A GitHub push does not update it. Pages on `*.netlify.app` call
+  `https://plaza-pr-api.fly.dev` cross-origin; served locally by FastAPI they
+  call same-origin.
 - **Fly.io** runs the API (slim image, `requirements-api.txt`, region dfw).
-  Pushing to `main` should auto-deploy; if `/openapi.json` doesn't show a new
-  route, run `flyctl deploy --remote-only`.
+  Inspect `/openapi.json` after `flyctl deploy --remote-only`; do not assume
+  GitHub auto-deployed the new API.
 - **Supabase** holds the data and Auth. Connections go through the
   session pooler (`aws-1-us-east-1.pooler.supabase.com:5432`); the direct host
   is IPv6-only.

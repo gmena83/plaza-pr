@@ -2,8 +2,10 @@
 
 Extracts weekly discount circulars ("shoppers") from Puerto Rico supermarket
 chains, normalizes them into a queryable database, computes fair unit prices,
-detects price cycles, and serves a live dashboard + API — plus user accounts
-with shopping lists, basket optimization, and email alerts.
+detects retrospective price patterns, and serves a dashboard + API — plus
+magic-link accounts, shopping lists, an opt-in email digest, and a constrained
+shopping assistant. The illustrated future-week projection is fictitious, not
+a validated forecast.
 
 **Live app:** https://plaza-pr.netlify.app (landing) · /app (dashboard) · /negocios.html (B2B demo)
 **API:** https://plaza-pr-api.fly.dev
@@ -22,9 +24,16 @@ with shopping lists, basket optimization, and email alerts.
 - **Tracks history** week over week and **detects price cycles** (alternating
   weekly sales, rising/falling trends) to recommend **buy now / buy soon /
   wait / buy cheapest**.
-- **User accounts** (Supabase Auth magic links): shopping lists, per-chain
-  **basket optimization** ("compra tu lista en Econo esta semana"), and a
-  **Mi Lista email digest** every Monday and Thursday (see below).
+- **User accounts** (Supabase Auth email magic links): owner-scoped Mi Lista,
+  preferred stores and shopping cadence, basket comparisons, and optional
+  Monday/Thursday email digest (off until explicitly enabled).
+- **Grounded assistant** (only after login and completed profile): answers
+  narrowly scoped current-shopper questions with source/validity and caveats;
+  proposes list add/remove/target-price/size edits for explicit confirmation.
+  No external LLM and no access to the fictitious projection.
+- **In-app projection illustration**: a browser-only, invented four-week
+  basket marked **DATOS FICTICIOS** beside both chart and result. No real
+  shopping-time prediction or measured accuracy has been released.
 - **B2B demo dashboard** (/negocios): market-intelligence view for chains and
   brands — searches, engagement funnel, per-brand attention/conversion.
   Currently seeded with synthetic events; the queries are production queries.
@@ -67,7 +76,8 @@ and the dashboard freshness badge shows staleness.
 
 ## Mi Lista email digest
 
-Every Monday and Thursday each user with list items gets one email, sent via
+Every Monday and Thursday, only users who explicitly enable the Mi Lista
+summary and have saved items are eligible for an email, sent via
 Resend from `PLAZA <milista@plazapr.menatech.dev>` (subdomain verified: DKIM,
 SPF, DMARC `p=reject`; mail-tester 10/10). Replies go to `contact@menatech.dev`;
 the footer carries the postal address (410 Francisco Sein, San Juan, PR 00917).
@@ -83,8 +93,9 @@ Both are defaults in `notify_lists.py`, overridable with `PLAZA_REPLY_TO` /
   vs its last circular.
 - Items on offer only at a third store, and items with no offer this week,
   are listed separately.
-- Opt-in by default; "Resumen por email" checkbox in Mi Lista; footer link
-  goes to a one-button confirm page; RFC 8058 one-click unsubscribe header.
+- Off by default for new accounts; the "Resumen por email" checkbox in Mi
+  Lista is independent of profile completion. The footer has a confirmation
+  unsubscribe page and RFC 8058 one-click support.
 
 Schedule and safety (`notify_lists.py`):
 - Thursday: sent by `refresh.sh` right after the 06:00 scrape. Monday 07:30:

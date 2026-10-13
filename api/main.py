@@ -9,12 +9,15 @@ Endpoints:
   GET /offers?chain=selectos&limit=50     -> latest offers
   GET/POST/DELETE /api/list*              -> user shopping lists (Supabase Auth bearer)
 """
+import json
 import os
 from pathlib import Path
+from typing import Literal
 
 import requests as http_requests
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from normalize import basket, db
 from scrapers.common import load_config
@@ -402,6 +405,59 @@ def _own_list(c, request: Request) -> tuple[dict, int]:
     return user, _ensure_list(c, user["id"])
 
 
+@app.get("/api/profile")
+def get_profile(request: Request):
+    user = _require_user(request)
+    c = _conn()
+    row = c.execute("SELECT preferred_chains, shopping_cadence FROM profiles WHERE user_id = ?",
+                    (user["id"],)).fetchone()
+    chains = row["preferred_chains"] if row else []
+    if isinstance(chains, str):
+        chains = json.loads(chains)
+    cadence = row["shopping_cadence"] if row else None
+    n = c.execute("SELECT COUNT(*) n FROM list_items i JOIN lists l ON l.id = i.list_id "
+                  "WHERE l.user_id = ?", (user["id"],)).fetchone()["n"]
+    return {"preferred_chains": chains, "shopping_cadence": cadence,
+            "list_item_count": n, "complete": bool(n and chains and cadence)}
+
+
+class ProfilePrefs(BaseModel):
+    preferred_chains: list[str]
+    shopping_cadence: Literal["weekly", "biweekly", "monthly"]
+
+
+@app.patch("/api/profile")
+def update_profile(request: Request, prefs: ProfilePrefs):
+    user = _require_user(request)
+    c = _conn()
+    chains = prefs.preferred_chains
+    available = {r["slug"] for r in c.execute("SELECT slug FROM chains").fetchall()}
+    if len(set(chains)) != len(chains) or not set(chains).issubset(available):
+        raise HTTPException(status_code=400, detail="supermercado no válido o repetido")
+    c.execute("INSERT INTO profiles(user_id, preferred_chains, shopping_cadence) "
+              "VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET "
+              "preferred_chains=excluded.preferred_chains, "
+              "shopping_cadence=excluded.shopping_cadence, updated_at=CURRENT_TIMESTAMP",
+              (user["id"], json.dumps(prefs.preferred_chains), prefs.shopping_cadence))
+    c.commit()
+    return get_profile(request)
+
+
+class AssistantQuestion(BaseModel):
+    message: str
+
+
+@app.post("/api/assistant")
+def ask_assistant(request: Request, question: AssistantQuestion):
+    user = _require_user(request)
+    if not get_profile(request)["complete"]:
+        raise HTTPException(status_code=403, detail="Completa Mi Lista, tus supermercados preferidos y tu frecuencia de compra.")
+    if not 3 <= len(question.message.strip()) <= 220:
+        raise HTTPException(status_code=422, detail="Pregunta de 3 a 220 caracteres requerida")
+    from api.assistant import answer
+    return answer(_conn(), user["id"], question.message)
+
+
 @app.get("/api/list")
 def get_list(request: Request):
     c = _conn()
@@ -411,7 +467,7 @@ def get_list(request: Request):
     result["email"] = user.get("email")
     result["list_id"] = lid
     pref = c.execute("SELECT enabled FROM email_prefs WHERE user_id = ?", (user["id"],)).fetchone()
-    result["digest_enabled"] = pref["enabled"] if pref else True   # opt-in by default
+    result["digest_enabled"] = bool(pref["enabled"]) if pref else False   # explicit opt-in
     return result
 
 

@@ -18,21 +18,26 @@ aggregator — same content the chains publish.
   walmart      1
   freshmart    1
   plaza-loiza  1
-  pueblo       0   (structured, own site — no CDN copy)
+  pueblo       3+  (correction 2026-10-13: archived Wednesday flyer JPEGs found;
+                     8 pages each for Sep 30, Sep 23 and Sep 16)
   ralphs       0   (structured, own site)
   supermax     0   (own site PDF)
 
 ## Strategy per chain type
-- structured (pueblo, amigo, ralphs): no historical endpoint; their own site only
-  serves the current week. History accrues forward via the weekly timer.
-  BUT amigo IS on the CDN (6 weeks) -> backfill amigo from CDN for history.
+- structured (pueblo, amigo, ralphs): own endpoint serves the current week.
+  Archived *flyer images* now verified for Pueblo (3 prior Wednesday editions)
+  and Amigo (6 weeks) on the CDN; these are narrower than the structured weekly
+  shopper, lack SKU ids, and cannot recreate a historical full-price catalog.
+  Ralph's archive status requires a fresh probe.
 - CDN-covered (econo, selectos, amigo, mr-special, agranel, mi-gente, walmart,
   freshmart, plaza-loiza): backfill from dated CDN page images -> VL extraction.
 - supermax: own-site PDF is current-only; history accrues forward.
 
 ## Validity windows
-CDN filename date = week start (Wednesday). valid_from = that date,
-valid_to = +6 days. mr-special/mi-gente run ~2 weeks -> valid_to = +13.
+CDN filename date = the chain's printed start (Pueblo Wednesday, some others
+Thursday). valid_from = that date, valid_to = +6 days for Pueblo/weekly chains;
+mr-special/mi-gente run ~2 weeks -> valid_to = +13. `backfill.py` currently
+generates Thursdays and excludes Pueblo: do NOT run it unchanged for Pueblo.
 
 ## Dedup with existing data
 Offers are keyed (chain, product_norm, size_text, price_sale, valid_from).

@@ -46,11 +46,24 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- ── completed-profile preferences ───────────────────────────────────────────
+-- API-only: the Fly API verifies the Supabase bearer and owns all reads/writes.
+-- Keep list membership in list_items; completion is computed, not persisted.
+CREATE TABLE IF NOT EXISTS profiles (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    preferred_chains JSONB NOT NULL DEFAULT '[]'::jsonb
+        CHECK (jsonb_typeof(preferred_chains) = 'array'),
+    shopping_cadence TEXT CHECK (shopping_cadence IN ('weekly', 'biweekly', 'monthly')),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON profiles FROM anon, authenticated;
+
 -- ── Mi Lista email digest ───────────────────────────────────────────────────
--- One row per user, created (opt-in) the first time they have list items.
+-- One row per user, created only on explicit opt-in. Missing row = no emails.
 CREATE TABLE IF NOT EXISTS email_prefs (
     user_id          UUID PRIMARY KEY,
-    enabled          BOOLEAN NOT NULL DEFAULT true,
+    enabled          BOOLEAN NOT NULL DEFAULT false,
     unsub_token      TEXT NOT NULL UNIQUE
                      DEFAULT replace(gen_random_uuid()::text,'-','') || replace(gen_random_uuid()::text,'-',''),
     unsubscribed_at  TIMESTAMPTZ,
@@ -76,6 +89,8 @@ CREATE TABLE IF NOT EXISTS email_log (
     UNIQUE (user_id, kind, period)
 );
 CREATE INDEX IF NOT EXISTS idx_email_log_user ON email_log(user_id, created_at DESC);
+-- Existing deployments may have been created with an opt-out default.
+ALTER TABLE email_prefs ALTER COLUMN enabled SET DEFAULT false;
 
 ALTER TABLE email_prefs ENABLE ROW LEVEL SECURITY;   -- no policies: API-only
 ALTER TABLE email_log   ENABLE ROW LEVEL SECURITY;

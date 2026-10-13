@@ -1,0 +1,11 @@
+[Unit]
+Description=Pueblo catalog pilot next-edition capture and comparison
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/pr-shopper-pipeline
+Environment=PYTHONPATH=%h/pr-shopper-pipeline
+ExecStart=%h/pr-shopper-pipeline/.venv/bin/python %h/pr-shopper-pipeline/spikes/001-pueblo-catalog/followup.py
+TimeoutStartSec=3h
+Nice=10

@@ -59,13 +59,14 @@ endpoints; history endpoints span all weeks.
 
 ## User lists (authenticated)
 
-Auth: Supabase magic-link. The frontend stores `access_token` /
+Auth: Supabase email magic link. The frontend stores `access_token` /
 `refresh_token` in localStorage and sends `Authorization: Bearer <token>`.
-The API validates the token against `{SUPABASE_URL}/auth/v1/user`.
+The API validates the token against `{SUPABASE_URL}/auth/v1/user`; it never
+accepts a client-provided user ID. Password signup is deferred.
 
 - `GET /api/list` -> the caller's list with per-item best offer, per-chain
   basket ranking, `verdict` (cheapest full basket this week) and
-  `digest_enabled` (Mi Lista email on/off, default true):
+  `digest_enabled` (Mi Lista email on/off, default **false** until opt-in):
   ```
   { email, list_id, digest_enabled,
     items: [{item_id, product_norm, display_name, size, any_size, target_price,
@@ -86,6 +87,32 @@ The API validates the token against `{SUPABASE_URL}/auth/v1/user`.
 Returns `401 {"detail":"login requerido"}` without a valid token. The API
 caches a validated token for 60 s.
 
+## Completed profile and grounded assistant (authenticated)
+
+- `GET /api/profile` -> `{preferred_chains:[slug], shopping_cadence,
+  list_item_count, complete}` for the bearer-token owner. `complete=true`
+  requires a saved item, at least one preferred chain, and a shopping cadence.
+- `PATCH /api/profile` with JSON
+  `{ "preferred_chains": ["pueblo"], "shopping_cadence": "weekly" }`
+  (cadence: `weekly|biweekly|monthly`) validates chain slugs and updates only
+  the owner. A missing list item keeps `complete=false`.
+- `POST /api/assistant` with JSON `{ "message": "¿Dónde compro carne más barata?" }`
+  returns `{kind, answer, offers:[], actions:[]}` (and `counts` for specials).
+  It requires both a valid bearer token and a complete profile; otherwise
+  401/403. The input is limited to 3–220 characters. There is **no external
+  LLM**: supported intents cover current offer lookup, distinct product/size
+  shopper counts, cautiously scoped meat/oat-milk comparisons, and Mi Lista
+  edits. It may return `no_data` rather than a universal cheapest-store claim.
+  Offer evidence includes source URL (when present), store, pack, price and
+  validity; the source is current shopper `offers` only, never the fictitious
+  projection or unreviewed archive.
+- List mutations return `kind=list_proposal` with `actions[]` containing a
+  label, method, owner-scoped list path, parameters and
+  `requires_confirmation=true`. This POST never writes the list; after the
+  user selects an exact product and confirms, the frontend calls the normal
+  owner-scoped list endpoint and reloads Mi Lista. The API still checks the
+  bearer on that write. Supported edits: price target and any-size matching.
+
 ## Email unsubscribe (no login; token from the email)
 
 - `GET /u/{token}` -> confirm page with one button. Opening the link alone
@@ -103,8 +130,12 @@ caches a validated token for 60 s.
   and the brand's current real offers (price position).
 
 ## Notes for consumers
-- `unit_price` + `price_basis` give fair comparison (`$/lb`, `$/100ml`, `$/un`).
-  Prefer these over `price_sale` when comparing across chains or pack sizes.
+- `unit_price` and `price_basis` help only when product identity, pack and
+  units are independently comparable. OCR and merchant size labels can be
+  ambiguous (a `23-27 Libras` meat entry was divided again as if the advertised
+  per-pound price were a whole-package price); verify against the source before
+  making a lowest-unit-price claim. The assistant limits meat to explicit
+  one-pound labels and otherwise abstains.
 - `sku` is the retailer SKU when the source exposes one (structured chains),
   else a stable generated key `chain:product_norm|size`.
 - `size_canonical` is the normalized size (e.g. `15.5oz`, `12x10oz`, `3lbs`) —
