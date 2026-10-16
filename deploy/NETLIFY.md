@@ -84,5 +84,11 @@ cp api/static/negocios.html  deploy/netlify/negocios.html
 cd deploy/netlify && netlify deploy --prod --dir=.
 ```
 
-Supabase Auth must list the site in its redirect allow-list
-(`https://plaza-pr.netlify.app/**`; site_url `https://plaza-pr.netlify.app`).
+Supabase Auth configuration for Email/Password and Google OAuth:
+- Redirect allow-list: `https://plaza-pr.netlify.app/**` (and `http://127.0.0.1:8200/**` for local dev); site_url `https://plaza-pr.netlify.app`.
+- **Google OAuth Setup in Supabase Auth**:
+  1. Go to Supabase Dashboard -> **Authentication** -> **Providers** -> **Google**.
+  2. Enable Google authentication.
+  3. Create an OAuth 2.0 Client ID in Google Cloud Console (APIs & Services -> Credentials).
+  4. In Google Cloud Console, add `https://<your-supabase-project-id>.supabase.co/auth/v1/callback` under **Authorized redirect URIs**.
+  5. Copy Client ID and Client Secret into Supabase Google Provider configuration and save.
