@@ -51,6 +51,13 @@ class CompatCursor:
             self._exec(sql_t, params)
         return self
 
+    def executemany(self, sql, seq_of_params):
+        if not seq_of_params:
+            return self
+        sql_t = _translate(sql)
+        psycopg2.extras.execute_batch(self._cur, sql_t, seq_of_params)
+        return self
+
     def fetchall(self):
         return self._cur.fetchall()
 
@@ -75,6 +82,11 @@ class CompatConnection:
         cur = CompatCursor(self._conn.cursor(
             cursor_factory=psycopg2.extras.RealDictCursor))
         return cur.execute(sql, params)
+
+    def executemany(self, sql, seq_of_params):
+        cur = CompatCursor(self._conn.cursor(
+            cursor_factory=psycopg2.extras.RealDictCursor))
+        return cur.executemany(sql, seq_of_params)
 
     def executescript(self, script: str):
         with self._conn.cursor() as cur:
