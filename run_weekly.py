@@ -95,15 +95,19 @@ def run_chain(conn, cfg, slug: str) -> dict:
         else:
             raise ValueError(f"unknown chain type {ctype}")
 
-        n = db.upsert_offers(conn, run_id, slug, offers, valid_from, valid_to)
-        if ctype in ("browser", "browser_interactive", "images", "pdf"):
-            db.dedup_offers(conn, slug, valid_from)
+        db.upsert_offers(conn, run_id, slug, offers, valid_from, valid_to)
+        db.dedup_offers(conn, slug, valid_from, run_id=run_id)
+        n = conn.execute("SELECT COUNT(*) AS n FROM offers WHERE run_id=?",
+                         (run_id,)).fetchone()["n"]
         db.finish_run(conn, run_id, "ok", n)
         log.info("[%s] DONE: %d offers upserted (%s -> %s)", slug, n, valid_from, valid_to)
         return {"chain": slug, "status": "ok", "offers": n,
                 "valid_from": valid_from, "valid_to": valid_to}
     except Exception as e:  # noqa: BLE001
         log.exception("[%s] FAILED", slug)
+        # start_run committed the durable 'running' marker. Discard all
+        # uncommitted offers/products/dedup before recording failure.
+        conn.rollback()
         if run_id is not None:
             db.finish_run(conn, run_id, "error", 0, str(e))
         return {"chain": slug, "status": "error", "error": str(e)}

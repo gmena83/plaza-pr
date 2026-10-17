@@ -62,26 +62,18 @@ def test_phone_search_result_is_a_card_not_a_seven_column_scroll():
             browser.close()
 
 
-def test_phone_secondary_movers_fit_with_long_realistic_names():
+def test_phone_history_caveat_fits_without_the_misleading_movers_table():
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
         page = browser.new_page(viewport={"width": 375, "height": 812}, has_touch=True)
         try:
             page.goto(DASHBOARD, wait_until="domcontentloaded")
-            page.evaluate("""() => {
-              const names=['House of Raeford Muslos de Pollo','Detergente Líquido Ace Simply',
-                'Pinchos de Pollo ECONO','Filete de Carrucho','Pechugas de Pollo AriztiA*',
-                'Lechuga Romana','Gandules Verdes ECONO','New York Steak Choice',
-                'Gandules ECONO','Selectos Pimientos Morrones','Especias Badia',
-                'Coca Cola, Sprite o Fanta Refresco'];
-              document.querySelector('#movers tbody').innerHTML = names.map(n =>
-                `<tr><td>${n}</td><td>selectos</td><td class="price">$0.57</td><td class="down">-92.9%</td></tr>`).join('');
-            }""")
             fit = page.evaluate("""() => ({screen:innerWidth,
               doc:document.documentElement.scrollWidth,
-              table:document.querySelector('#movers').getBoundingClientRect().right,
-              card:document.querySelector('#movers').closest('.card').getBoundingClientRect().right})""")
+              note:!![...document.querySelectorAll('.card')].find(c=>c.querySelector('h2')?.textContent.includes('Cómo leer el historial')),
+              movers:!!document.querySelector('#movers')})""")
+            assert not fit["movers"]
+            assert fit["note"]
             assert fit["doc"] <= fit["screen"]
-            assert fit["table"] <= fit["card"]
         finally:
             browser.close()

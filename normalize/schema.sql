@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS offers (
     valid_to       TEXT,
     source_url     TEXT,
     scraped_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    -- Legacy identity: excludes brand/SKU/promo and NULLs are distinct.
+    -- Writer must fail closed on variant collisions; do not remove this key
+    -- without an audited SQLite migration and new conflict handling.
     UNIQUE(chain_slug, product_norm, size_text, price_sale, valid_from)
 );
 

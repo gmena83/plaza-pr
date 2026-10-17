@@ -65,9 +65,9 @@ def test_dedup_offers_batch(memory_db):
             "category": "Granos",
         },
         {
-            "product_raw": "Arroz 3 lb Duplicate",
+            "product_raw": "Arroz 3 lb",
             "product_norm": "arroz 3lb",
-            "brand": None,  # less rich
+            "brand": "Sello Rojo",  # same known brand and canonical pack
             "size_text": "3 lb (Pack)",
             "price_sale": 1.99,
             "category": "Granos",

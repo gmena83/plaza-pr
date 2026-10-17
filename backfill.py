@@ -61,8 +61,10 @@ def backfill_chain_week(conn, cfg, cdn_chain: str, slug: str, week: str,
         out_dir = ROOT / "data" / "pages" / f"{slug}_{week}"
         images = cdn_fetch.fetch_week(cdn_chain, week, out_dir)
         offers = extract_images(images, slug, cfg)
-        n = db.upsert_offers(conn, run_id, slug, offers, vf, vt)
+        db.upsert_offers(conn, run_id, slug, offers, vf, vt)
         db.dedup_offers(conn, slug, vf)
+        n = conn.execute("SELECT COUNT(*) AS n FROM offers WHERE run_id=?",
+                         (run_id,)).fetchone()["n"]
         db.finish_run(conn, run_id, "ok", n)
         log.info("[%s %s] %d offers", slug, week, n)
         return {"chain": slug, "week": week, "offers": n, "status": "ok"}

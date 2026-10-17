@@ -154,6 +154,21 @@
   .google-btn{background:#fff !important;color:#000 !important;display:inline-flex;
     align-items:center;justify-content:center;gap:8px;font-weight:700;border:none;cursor:pointer}
   .google-btn svg{width:16px;height:16px;flex:none}
+  .authlink{background:none !important;color:var(--sea) !important;border:0 !important;
+    text-align:left;padding:8px 0 !important;text-decoration:underline;align-self:flex-start}
+  .authnote{font-size:11px;color:var(--dim);line-height:1.6;overflow-wrap:anywhere}
+  .pending-review{margin:14px 18px;padding:12px;border-left:3px solid var(--sol);
+    background:var(--panel2);font-size:12px;line-height:1.6}
+  .pending-review button{display:block;margin-top:10px}
+  .offer-list{display:grid;gap:10px;margin-top:14px}
+  .offer-row{padding:12px;border:1px solid var(--line);background:var(--panel2);min-width:0;overflow-wrap:anywhere}
+  .offer-row h3{font-size:13px;color:var(--ink);line-height:1.5}
+  .offer-meta,.offer-validity{color:var(--dim);font-size:11px;line-height:1.6}
+  .offer-chains{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:8px;margin-top:8px}
+  .offer-chain{border-left:2px solid var(--mamey);padding:5px 10px;min-width:0}
+  .offer-chain strong{color:var(--sol)}
+  .offer-chain a{color:var(--sea);font-size:11px}
+  .analytics-note{color:var(--dim);font-size:12px;line-height:1.6;margin-top:12px}
   .analytics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
   .analytics-card{background:var(--panel2);border:1px solid var(--line);padding:14px}
   .analytics-card h3{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
@@ -352,17 +367,18 @@
     <div id="listbody">
       <div id="loginbox">
         <div class="authtabs">
-          <button class="authtab active" id="tab-login" onclick="switchAuthTab('login')">ENTRAR</button>
-          <button class="authtab" id="tab-signup" onclick="switchAuthTab('signup')">REGISTRARSE</button>
-          <button class="authtab" id="tab-magic" onclick="switchAuthTab('magic')">ENLACE MÁGICO</button>
-          <button class="authtab" id="tab-google" onclick="switchAuthTab('google')">GOOGLE</button>
+          <button class="authtab active" id="tab-magic" onclick="switchAuthTab('magic')">ENLACE MÁGICO</button>
+          <button class="authtab" id="tab-login" onclick="switchAuthTab('login')">CONTRASEÑA</button>
+          <button class="authtab hidden" id="tab-signup" onclick="switchAuthTab('signup')">REGISTRARSE</button>
+          <button class="authtab hidden" id="tab-google" onclick="switchAuthTab('google')">GOOGLE</button>
         </div>
 
-        <div id="form-login" class="authform">
+        <div id="form-login" class="authform hidden">
           <div style="font-size:12px;color:var(--dim)">Entra con tu correo y contraseña.</div>
           <input id="login-email" type="email" placeholder="tu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')$('#login-pass').focus()">
           <input id="login-pass" type="password" placeholder="tu contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginWithPassword()">
           <button onclick="loginWithPassword()">ENTRAR CON CONTRASEÑA</button>
+          <button class="authlink" id="recovery-link" type="button" onclick="switchAuthTab('recovery')">¿Olvidaste tu contraseña?</button>
         </div>
 
         <div id="form-signup" class="authform hidden">
@@ -372,10 +388,20 @@
           <button onclick="signUpWithPassword()">CREAR CUENTA</button>
         </div>
 
-        <div id="form-magic" class="authform hidden">
+        <div id="form-magic" class="authform">
           <div style="font-size:12px;color:var(--dim)">Entra sin contraseña mediante un enlace enviado a tu email.</div>
           <input id="magic-email" type="email" placeholder="tu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')sendMagicLink()">
           <button onclick="sendMagicLink()">ENVIAR ENLACE MÁGICO</button>
+        </div>
+        <div id="form-recovery" class="authform hidden">
+          <p class="authnote">Recibe un enlace para cambiar tu contraseña. No necesitas conocer la anterior.</p>
+          <input id="recovery-email" type="email" placeholder="tu@email.com" autocomplete="email">
+          <button id="recovery-send" type="button" onclick="sendRecovery()">ENVIAR ENLACE DE RECUPERACIÓN</button>
+        </div>
+        <div id="form-reset" class="authform hidden">
+          <p class="authnote">Elige una nueva contraseña para tu cuenta.</p>
+          <input id="reset-pass" type="password" autocomplete="new-password" placeholder="nueva contraseña (mín. 6 caracteres)">
+          <button type="button" onclick="resetPassword()">CAMBIAR CONTRASEÑA</button>
         </div>
 
         <div id="form-google" class="authform hidden">
@@ -387,8 +413,10 @@
         </div>
 
         <div id="loginmsg" style="font-size:11px;color:var(--mamey);margin-top:10px"></div>
+        <div id="auth-review" class="pending-review hidden" role="status"></div>
       </div>
       <div id="listview" class="hidden">
+        <div id="pending-review" class="pending-review hidden" role="status"></div>
         <div class="reco hidden" id="basketverdict"></div>
         <table id="listtable"><tbody></tbody></table>
         <div id="chainrank"></div>
@@ -462,30 +490,21 @@
       </section>
     </div>
     <div class="card">
-      <h2>Mayores bajas de la semana <span class="dot"></span></h2>
-      <table id="movers"><tbody><tr><td class="loading">cargando…</td></tr></tbody></table>
+      <h2>Cómo leer el historial <span class="dot"></span></h2>
+      <p class="legend">La gráfica resume mínimos de especiales anunciados por nombre normalizado, cadena y edición. Puede mezclar tamaños, marcas o condiciones de compra: un cambio entre puntos no demuestra que haya bajado el precio del mismo artículo.</p>
+      <p class="legend">Para comparar ofertas de hoy, usa las coincidencias con tamaño y base de precio indicadas abajo. Confirma vigencia y condiciones con la fuente antes de comprar.</p>
     </div>
   </div>
 
-  <div class="card" id="analytics-section" style="margin-top:20px">
-    <h2>Métricas y Análisis de Mercado <span class="dot"></span></h2>
+  <section class="card" id="analytics-section" style="margin-top:20px" aria-label="Especiales anunciados comparables">
+    <h2>Especiales comparables hoy <span class="dot"></span></h2>
     <div style="padding:18px">
-      <div class="analytics-grid" id="analytics-kpis">
-        <div class="analytics-card"><div class="analytics-sub">cargando métricas…</div></div>
-      </div>
-
-      <div class="grid" style="margin-top:16px">
-        <div class="card">
-          <h2>Proyección de Canasta Básica por Cadena <span class="dot"></span></h2>
-          <div style="padding:14px;overflow-x:auto" id="basket-proj-box">cargando proyecciones…</div>
-        </div>
-        <div class="card">
-          <h2>Supermercado Más Económico por Categoría <span class="dot"></span></h2>
-          <div style="padding:14px;overflow-x:auto" id="category-comp-box">cargando comparativa…</div>
-        </div>
-      </div>
+      <p id="analytics-status" class="analytics-note" role="status" aria-live="polite">Cargando especiales anunciados…</p>
+      <div class="analytics-grid" id="analytics-kpis"></div>
+      <div id="comparable-rows" class="offer-list"></div>
+      <p class="analytics-note">Solo especiales anunciados vigentes con coincidencia heurística de nombre normalizado, marca, tamaño y base de precio; cada producto muestra solo las cadenas con una oferta coincidente. El contador de cadenas con ofertas no indica cobertura de cada producto. Se excluyen de las comparaciones, no del contador de ofertas vigentes, las promociones de multicompra (p. ej., 2/$4) cuyo precio por unidad requiere comprar varias. Comprueba vigencia y condiciones en el anuncio fuente si está enlazado. No cubre todo el inventario ni garantiza existencias. No es una canasta completa ni una predicción de precios futuros.</p>
     </div>
-  </div>
+  </section>
 
   <div class="grid" style="margin-top:20px">
     <div class="card">
@@ -583,15 +602,6 @@ async function loadStats(){
   } else { badge.className='fresh stale'; badge.textContent='sin corridas recientes'; }
 }
 
-async function loadMovers(){
-  const m = await j('/api/movers?direction=down&limit=12');
-  $('#movers').querySelector('tbody').innerHTML = m.movers.length? m.movers.map(x=>`
-    <tr><td>${esc((x.display_name||x.product_norm).slice(0,34))}</td>
-    <td style="color:${COLORS[x.chain_slug]||'#e8eef2'}">${x.chain_slug}</td>
-    <td class="price">${money(x.price_sale)}</td>
-    <td class="down">${x.pct_change}%</td></tr>`).join('')
-    : '<tr><td class="loading">se acumula con las semanas de historial</td></tr>';
-}
 
 function renderResults(){
   const fc = $('#fchain').value, fs = $('#fsize').value;
@@ -816,19 +826,85 @@ const SB_URL = 'https://blluhfmfslxpmacnqkox.supabase.co';
 const SB_ANON = 'sb_publishable_khCOzFeZ4MOUz49skUyMvA_MEZzhjFe';
 const SESSION = {token: localStorage.getItem('plaza_token') || null,
                  refresh: localStorage.getItem('plaza_refresh') || null,
-                 email: localStorage.getItem('plaza_email') || null};
+                 email: localStorage.getItem('plaza_email') || null,
+                 userId: localStorage.getItem('plaza_user_id') || null};
+const AUTH = {signup:false, google:false, recoveryToken:null};
+const AUTH_INTENT = 'plaza_auth_intent';
+function authMessage(text, error=false){
+  const msg=$('#loginmsg'); msg.style.color=error?'var(--flam)':'var(--mamey)'; msg.textContent=text;
+}
+function authCallbackError(text){
+  authMessage(text,true);
+  toast(esc(text),{err:true,ms:6000});
+}
+async function loadAuthSettings(){
+  try{
+    const r=await sb('/auth/v1/settings');
+    if(!r.ok) throw new Error('settings unavailable');
+    const s=await r.json();
+    AUTH.signup=s.disable_signup===false && s.mailer_autoconfirm===false && s.external?.email===true;
+    AUTH.google=s.external?.google===true;
+  }catch(e){ AUTH.signup=false; AUTH.google=false; }
+  $('#tab-signup').classList.toggle('hidden', !AUTH.signup);
+  $('#tab-google').classList.toggle('hidden', !AUTH.google);
+  if(!AUTH.signup && $('#tab-signup').classList.contains('active')) switchAuthTab('magic');
+  if(!AUTH.google && $('#tab-google').classList.contains('active')) switchAuthTab('magic');
+}
+function redirectFor(kind){
+  const nonce=Array.from(crypto.getRandomValues(new Uint8Array(24)), b=>b.toString(16).padStart(2,'0')).join('');
+  // The email link may open in another tab of this same origin.
+  localStorage.setItem(AUTH_INTENT, JSON.stringify({kind,nonce,created:Date.now()}));
+  const url=new URL(location.href); url.hash=''; url.searchParams.delete('plaza_auth_state');
+  url.searchParams.set('plaza_auth_state',nonce);
+  return url.href;
+}
+function authUrl(path, kind){
+  return path+'?redirect_to='+encodeURIComponent(redirectFor(kind));
+}
+function clearAuthIntent(){localStorage.removeItem(AUTH_INTENT); sessionStorage.removeItem(AUTH_INTENT);}
+async function authIdentity(token){
+  const r=await sb('/auth/v1/user',{headers:{Authorization:'Bearer '+token}});
+  if(!r.ok) throw new Error('no se pudo verificar la cuenta');
+  const user=await r.json();
+  if(!user.id || !user.email) throw new Error('identidad incompleta');
+  return user;
+}
 
 async function sb(path, opts={}){
   const r = await fetch(SB_URL+path, {...opts, headers:{'apikey':SB_ANON,'Content-Type':'application/json',...(opts.headers||{})}});
   return r;
 }
+function sessionSnapshot(){
+  return {token:SESSION.token, refresh:SESSION.refresh, id:SESSION.userId, email:SESSION.email};
+}
+function sessionMatches(s){
+  return !!s?.token && SESSION.token===s.token && SESSION.refresh===s.refresh &&
+    SESSION.userId===s.id && SESSION.email===s.email &&
+    localStorage.getItem('plaza_token')===s.token &&
+    localStorage.getItem('plaza_refresh')===s.refresh &&
+    localStorage.getItem('plaza_user_id')===s.id &&
+    localStorage.getItem('plaza_email')===s.email;
+}
 async function apiAuth(path, opts={}){
-  const go = () => fetch(API+path, {...opts, headers:{'Authorization':'Bearer '+SESSION.token,...(opts.headers||{})}});
+  const original=sessionSnapshot();
+  if(!sessionMatches(original)) throw new Error('La sesión cambió. Revisa la cuenta antes de continuar.');
+  let current=original;
+  const go = () => {
+    if(!sessionMatches(current)) throw new Error('La sesión cambió. Revisa la cuenta antes de continuar.');
+    return fetch(API+path, {...opts, headers:{...(opts.headers||{}),'Authorization':'Bearer '+current.token}});
+  };
   let r = await go();
   // access tokens last ~1h: one silent refresh before giving up
-  if(r.status===401 && await refreshSession()) r = await go();
+  if(!sessionMatches(current)) throw new Error('La sesión cambió. Revisa la cuenta antes de continuar.');
+  if(r.status===401 && await refreshSession(current)){
+    current=sessionSnapshot();
+    if(current.id!==original.id || current.email!==original.email) throw new Error('La cuenta cambió. Revisa la cuenta.');
+    r = await go();
+  }
+  if(!sessionMatches(current)) throw new Error('La sesión cambió. Revisa la cuenta antes de continuar.');
   if(r.status===401){ logout(); throw new Error('tu sesión expiró, entra de nuevo'); }
   const body = await r.json().catch(()=>({}));
+  if(!sessionMatches(current)) throw new Error('La sesión cambió. Revisa la cuenta antes de continuar.');
   if(!r.ok) throw new Error(body.detail || body.error || ('error '+r.status));
   return body;
 }
@@ -858,7 +934,7 @@ function goList(){
 
 // items tapped while logged out survive the magic-link round trip
 const PENDING_KEY = 'plaza_pending';
-function getPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY)||'[]'); }catch(e){ return []; } }
+function getPending(){ try{ const p=JSON.parse(localStorage.getItem(PENDING_KEY)||'[]'); return Array.isArray(p)?p:[]; }catch(e){ return []; } }
 function setPending(a){ a.length ? localStorage.setItem(PENDING_KEY, JSON.stringify(a.slice(-50))) : localStorage.removeItem(PENDING_KEY); }
 function pendingKeys(){ return new Set(getPending().map(p=>itemKey(p.product_norm, p.size))); }
 
@@ -874,32 +950,36 @@ function toast(html, o={}){
 function hideToast(){ $('#toast').classList.remove('show'); }
 
 function switchAuthTab(tab){
-  ['login','signup','magic','google'].forEach(t=>{
+  if((tab==='signup'&&!AUTH.signup) || (tab==='google'&&!AUTH.google)) return;
+  ['login','signup','magic','google','recovery','reset'].forEach(t=>{
     const tabBtn = $('#tab-'+t);
     const formDiv = $('#form-'+t);
-    if(!tabBtn || !formDiv) return;
-    if(t === tab){
-      tabBtn.classList.add('active');
-      formDiv.classList.remove('hidden');
-    } else {
-      tabBtn.classList.remove('active');
-      formDiv.classList.add('hidden');
-    }
+    if(tabBtn) tabBtn.classList.toggle('active', t===tab);
+    if(formDiv) formDiv.classList.toggle('hidden', t!==tab);
   });
-  const msg = $('#loginmsg');
-  if(msg){ msg.textContent = ''; msg.style.color = 'var(--mamey)'; }
+  authMessage('');
 }
 
 async function handleAuthSuccess(d){
-  if(d.access_token){
-    SESSION.token = d.access_token;
-    SESSION.refresh = d.refresh_token;
-    localStorage.setItem('plaza_token', d.access_token);
-    if(d.refresh_token) localStorage.setItem('plaza_refresh', d.refresh_token);
-    JUST_IN = true;
-    await loadList();
-    if(getPending().length) flushPending();
+  if(!d.access_token) return;
+  const before=sessionSnapshot();
+  if(before.token && !sessionMatches(before)) throw new Error('session changed');
+  const user=await authIdentity(d.access_token);
+  if(before.token ? !sessionMatches(before) :
+     !!(SESSION.token || localStorage.getItem('plaza_token'))) throw new Error('session changed');
+  // Never silently replace an account with a different identity.
+  if(SESSION.token && (!SESSION.userId || SESSION.userId!==user.id)){
+    authMessage('Otra cuenta está abierta. Sal primero y vuelve a intentarlo.',true);
+    return;
   }
+  SESSION.token=d.access_token; SESSION.refresh=d.refresh_token||null;
+  SESSION.userId=user.id; SESSION.email=user.email;
+  localStorage.setItem('plaza_token',SESSION.token);
+  if(SESSION.refresh) localStorage.setItem('plaza_refresh',SESSION.refresh);
+  localStorage.setItem('plaza_user_id',user.id);
+  localStorage.setItem('plaza_email',user.email);
+  JUST_IN=true;
+  await loadList(); // Pending items require a separate, explicit account review.
 }
 
 async function loginWithPassword(){
@@ -928,6 +1008,7 @@ async function loginWithPassword(){
 }
 
 async function signUpWithPassword(){
+  if(!AUTH.signup){ authMessage('Registro no disponible hasta confirmar el correo.',true); return; }
   const email = $('#signup-email').value.trim();
   const password = $('#signup-pass').value;
   const msg = $('#loginmsg');
@@ -935,9 +1016,9 @@ async function signUpWithPassword(){
   if(!password || password.length < 6){ msg.style.color='var(--flam)'; msg.textContent='la contraseña debe tener al menos 6 caracteres'; return; }
   msg.style.color='var(--sol)'; msg.textContent='creando cuenta…';
   try {
-    const r = await sb('/auth/v1/signup', {
+    const r = await sb(authUrl('/auth/v1/signup','signup'), {
       method: 'POST',
-      body: JSON.stringify({ email, password, options: { emailRedirectTo: location.origin + location.pathname } })
+      body: JSON.stringify({ email, password })
     });
     const d = await r.json();
     if(!r.ok){
@@ -946,10 +1027,12 @@ async function signUpWithPassword(){
       return;
     }
     if(d.access_token){
-      await handleAuthSuccess(d);
+      clearAuthIntent();
+      msg.style.color='var(--flam)';
+      msg.textContent='No se puede verificar la confirmación de correo. No se inició sesión.';
     } else {
       msg.style.color = 'var(--mamey)';
-      msg.textContent = '✓ cuenta creada. Si se requiere confirmación, revisa tu email.';
+      msg.textContent = '✓ Revisa tu email para confirmar la cuenta antes de entrar.';
     }
   } catch(e){
     msg.style.color = 'var(--flam)';
@@ -963,9 +1046,9 @@ async function sendMagicLink(){
   if(!email.includes('@')){ msg.style.color='var(--flam)'; msg.textContent='email inválido'; return; }
   msg.style.color='var(--sol)'; msg.textContent='enviando enlace…';
   try {
-    const r = await sb('/auth/v1/otp', {
+    const r = await sb(authUrl('/auth/v1/otp','magic'), {
       method:'POST',
-      body:JSON.stringify({email, options:{emailRedirectTo: location.origin + location.pathname}})
+      body:JSON.stringify({email})
     });
     if(r.ok){
       msg.style.color = 'var(--mamey)';
@@ -981,56 +1064,216 @@ async function sendMagicLink(){
   }
 }
 
+async function sendRecovery(){
+  const email=$('#recovery-email').value.trim();
+  if(!email.includes('@')){ authMessage('email inválido',true); return; }
+  authMessage('Enviando enlace…');
+  try{
+    const r=await sb(authUrl('/auth/v1/recover','recovery'),{method:'POST',body:JSON.stringify({email})});
+    if(!r.ok) throw new Error('recovery unavailable');
+    authMessage('Si existe la cuenta, recibirás un enlace para cambiar la contraseña.');
+  }catch(e){ clearAuthIntent(); authMessage('No se pudo enviar el enlace. Intenta más tarde.',true); }
+}
+async function resetPassword(){
+  const password=$('#reset-pass').value;
+  if(!AUTH.recoveryToken || password.length<6){ authMessage('Ingresa una contraseña de al menos 6 caracteres.',true); return; }
+  const token=AUTH.recoveryToken;
+  try{
+    const r=await sb('/auth/v1/user',{method:'PUT',headers:{Authorization:'Bearer '+token},body:JSON.stringify({password})});
+    if(!r.ok) throw new Error('reset rejected');
+    AUTH.recoveryToken=null; $('#reset-pass').value='';
+    // A recovery token must never become the shopping session.
+    await sb('/auth/v1/logout',{method:'POST',headers:{Authorization:'Bearer '+token}}).catch(()=>{});
+    if(SESSION.token) await bootSession();
+    else switchAuthTab('login');
+    authMessage('Contraseña cambiada. Entra con tu cuenta si tu sesión anterior terminó.');
+  }catch(e){ authMessage('No se pudo cambiar la contraseña. Solicita otro enlace.',true); }
+}
 function loginWithGoogle(){
-  const target = SB_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(location.origin + location.pathname);
-  location.href = target;
+  if(!AUTH.google) return;
+  const target=SB_URL+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(redirectFor('google'));
+  location.href=target;
+}
+async function captureTokenFromUrl(){
+  const h=new URLSearchParams(location.hash.slice(1));
+  const at=h.get('access_token'), error=h.get('error');
+  if(!at && !error) return;
+  let intent=null;
+  try{ intent=JSON.parse(localStorage.getItem(AUTH_INTENT)||sessionStorage.getItem(AUTH_INTENT)||'null'); }catch(e){}
+  const callbackState=new URLSearchParams(location.search).get('plaza_auth_state');
+  // A stale or injected callback must not consume a newer request's nonce.
+  if(intent && callbackState===intent.nonce) clearAuthIntent();
+  const clean=new URL(location.href); clean.hash=''; clean.searchParams.delete('plaza_auth_state');
+  history.replaceState(null,'',clean.pathname+clean.search);
+  if(error){ authCallbackError('El enlace falló o expiró. Solicita uno nuevo.'); return; }
+  if(!intent && callbackState && ['magiclink','recovery'].includes(h.get('type')) &&
+     !SESSION.token && !localStorage.getItem('plaza_token')){
+    try{
+      const user=await authIdentity(at);
+      const box=$('#auth-review');
+      const text=document.createElement('p');
+      const recovering=h.get('type')==='recovery';
+      text.textContent=`Enlace abierto en otro navegador o dispositivo. Cuenta verificada: ${user.email}. Confirma que es tu cuenta antes de ${recovering?'cambiar la contraseña':'entrar'}. Los productos pendientes no se guardarán hasta que los revises.`;
+      const button=document.createElement('button');
+      button.type='button'; button.textContent=recovering?'CAMBIAR CONTRASEÑA DE ESTA CUENTA':'ENTRAR EN ESTA CUENTA';
+      button.onclick=async()=>{
+        button.disabled=true;
+        try{
+          if(SESSION.token || localStorage.getItem('plaza_token')) throw new Error('session changed');
+          const verified=await authIdentity(at);
+          if(verified.id!==user.id || verified.email!==user.email) throw new Error('identity changed');
+          if(SESSION.token || localStorage.getItem('plaza_token')) throw new Error('session changed');
+          if(recovering){
+            AUTH.recoveryToken=at;
+            $('#listview').classList.add('hidden');
+            $('#loginbox').classList.remove('hidden');
+            switchAuthTab('reset');
+            authMessage('El enlace de recuperación está listo. Cambia tu contraseña.');
+          }else await handleAuthSuccess({access_token:at,refresh_token:h.get('refresh_token')});
+          box.replaceChildren(); box.classList.add('hidden');
+        }catch(e){box.replaceChildren();box.classList.add('hidden');authCallbackError('La cuenta cambió o el enlace expiró. Solicita uno nuevo.');}
+      };
+      box.replaceChildren(text,button); box.classList.remove('hidden');
+    }catch(e){authCallbackError('No se pudo verificar el enlace. Solicita uno nuevo.');}
+    return;
+  }
+  if(!intent || !callbackState || intent.nonce!==callbackState ||
+     !Number.isFinite(intent.created) || Date.now()-intent.created>15*60*1000 || intent.created>Date.now() ||
+     !['magic','google','signup','recovery'].includes(intent.kind)){
+    authCallbackError('Enlace no solicitado o hay otra sesión abierta. Sal antes de cambiar de cuenta.'); return;
+  }
+  try{
+    const incoming=await authIdentity(at);
+    if(SESSION.token && SESSION.token!==at){
+      let current;
+      try{ current=await authIdentity(SESSION.token); }
+      catch(e){
+        if(!await refreshSession()) throw new Error('current identity unavailable');
+        current=await authIdentity(SESSION.token);
+      }
+      if((SESSION.userId && current.id!==SESSION.userId) ||
+         (SESSION.email && current.email.toLowerCase()!==SESSION.email.toLowerCase()))
+        throw new Error('saved identity mismatch');
+      if(current.id!==incoming.id){
+        authCallbackError(`Cuenta abierta: ${current.email}. El enlace pertenece a ${incoming.email}. Sal y solicita otro enlace para cambiar de cuenta.`);
+        return;
+      }
+      if(localStorage.getItem('plaza_token')!==SESSION.token) throw new Error('session changed');
+      SESSION.userId=current.id; SESSION.email=current.email;
+      localStorage.setItem('plaza_user_id',current.id);
+      localStorage.setItem('plaza_email',current.email);
+    }
+    if(intent.kind==='recovery'){
+      if(h.get('type')!=='recovery') throw new Error('unexpected callback type');
+      AUTH.recoveryToken=at;
+      $('#listview').classList.add('hidden');
+      $('#loginbox').classList.remove('hidden');
+      switchAuthTab('reset');
+      authMessage('El enlace de recuperación está listo. Cambia tu contraseña.');
+      return;
+    }
+    if(h.get('type')==='recovery') throw new Error('unexpected recovery');
+    await handleAuthSuccess({access_token:at,refresh_token:h.get('refresh_token')});
+  }catch(e){ authCallbackError('No se pudo verificar el enlace. Solicita uno nuevo.'); }
 }
 
-function captureTokenFromUrl(){
-  const h = new URLSearchParams(location.hash.slice(1));
-  const at = h.get('access_token');
-  if(at){
-    SESSION.token = at;
-    SESSION.refresh = h.get('refresh_token');
-    localStorage.setItem('plaza_token', at);
-    if(SESSION.refresh) localStorage.setItem('plaza_refresh', SESSION.refresh);
-    history.replaceState(null,'',location.pathname+location.search);
-    JUST_IN = true;
+async function refreshSession(expected=sessionSnapshot()){
+  if(!expected.refresh || !sessionMatches(expected)) return false;
+  try{
+    const old=expected.refresh;
+    const r=await sb('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:old})});
+    if(!r.ok || !sessionMatches(expected)) return false;
+    const d=await r.json();
+    if(!d.access_token || !d.refresh_token) return false;
+    const user=await authIdentity(d.access_token);
+    if(!sessionMatches(expected) || (expected.id && user.id!==expected.id) ||
+       (expected.email && user.email.toLowerCase()!==expected.email.toLowerCase())) return false;
+    SESSION.token=d.access_token; SESSION.refresh=d.refresh_token; SESSION.userId=user.id; SESSION.email=user.email;
+    localStorage.setItem('plaza_token',d.access_token);
+    localStorage.setItem('plaza_refresh',d.refresh_token);
+    localStorage.setItem('plaza_user_id',user.id);
+    localStorage.setItem('plaza_email',user.email);
+    return true;
+  }catch(e){ return false; }
+}
+async function bootSession(){
+  const token=SESSION.token;
+  if(!token) return;
+  let verifiedToken=token;
+  try{
+    let user;
+    try{ user=await authIdentity(token); }
+    catch(e){
+      if(SESSION.token!==token || !await refreshSession()) throw e;
+      verifiedToken=SESSION.token;
+      user=await authIdentity(verifiedToken);
+    }
+    if(SESSION.token!==verifiedToken ||
+       (SESSION.userId && user.id!==SESSION.userId) ||
+       (SESSION.email && user.email.toLowerCase()!==SESSION.email.toLowerCase()))
+      throw new Error('saved identity mismatch');
+    SESSION.userId=user.id; SESSION.email=user.email;
+    localStorage.setItem('plaza_user_id',user.id);
+    localStorage.setItem('plaza_email',user.email);
+    await loadList();
+  }catch(e){
+    if(SESSION.token===verifiedToken){
+      clearLocalSession(); authMessage('Verifica tu cuenta y entra de nuevo.',true);
+    }
   }
 }
-
-async function refreshSession(){
-  if(!SESSION.refresh) return false;
-  const r = await sb('/auth/v1/token?grant_type=refresh_token', {method:'POST', body:JSON.stringify({refresh_token:SESSION.refresh})});
-  if(!r.ok) return false;
-  const d = await r.json();
-  SESSION.token = d.access_token; SESSION.refresh = d.refresh_token;
-  localStorage.setItem('plaza_token', d.access_token);
-  localStorage.setItem('plaza_refresh', d.refresh_token);
-  return true;
-}
-
-function logout(){
-  SESSION.token = SESSION.refresh = SESSION.email = null;
-  ['plaza_token','plaza_refresh','plaza_email'].forEach(k=>localStorage.removeItem(k));
+function clearLocalSession(preserveStorage=false){
+  SESSION.token=SESSION.refresh=SESSION.email=SESSION.userId=null;
+  if(!preserveStorage) ['plaza_token','plaza_refresh','plaza_email','plaza_user_id'].forEach(k=>localStorage.removeItem(k));
   $('#listview').classList.add('hidden');
+  $('#pending-review').classList.add('hidden');
   $('#loginbox').classList.remove('hidden');
-  $('#listuser').textContent = '';
+  $('#listuser').textContent='';
   $('#logoutbtn').classList.add('hidden');
   $('#profile-card').classList.add('hidden');
   $('#assistant-card').classList.add('hidden');
-  $('#assistant-input').disabled = $('#assistant-send').disabled = true;
-  $('#assistant-messages').textContent = '';
+  $('#assistant-input').disabled=$('#assistant-send').disabled=true;
+  $('#assistant-messages').textContent='';
   setList(null);
+}
+// Another tab may replace the account while this tab still displays its old list.
+window.addEventListener('storage', e=>{
+  if(['plaza_token','plaza_refresh','plaza_email','plaza_user_id'].includes(e.key) &&
+     SESSION.token && !sessionMatches(sessionSnapshot())){
+    clearLocalSession(true);
+    authMessage('La sesión cambió en otra pestaña. Recarga para verificar la cuenta antes de continuar.',true);
+  }
+});
+async function logout(){
+  if(SESSION.token && !sessionMatches(sessionSnapshot())){
+    clearLocalSession(true);
+    authMessage('La sesión cambió en otra pestaña. Recarga para verificar la cuenta.',true);
+    return;
+  }
+  const token=SESSION.token;
+  clearAuthIntent(); AUTH.recoveryToken=null;
+  clearLocalSession(); switchAuthTab('magic');
+  if(token){
+    try{
+      const r=await sb('/auth/v1/logout',{method:'POST',headers:{Authorization:'Bearer '+token}});
+      if(!r.ok) throw new Error('logout failed');
+    }catch(e){ authMessage('Sesión local cerrada. No se pudo confirmar el cierre remoto; cierra otras sesiones desde tu cuenta.',true); }
+  }
 }
 
 async function loadList(){
+  const identity=sessionSnapshot();
   let d;
   try{ d = await apiAuth('/api/list'); }
   catch(e){
-    // only a 401 logs out (inside apiAuth); a network blip must not
     if(SESSION.token) toast('no se pudo cargar tu lista: '+esc(e.message), {err:true});
     return;
+  }
+  // apiAuth verified the response under this identity; its token may have rotated.
+  if(!sessionMatches(sessionSnapshot()) || (identity.id && SESSION.userId!==identity.id) ||
+     (identity.email && SESSION.email!==identity.email)) return;
+  if(SESSION.email && d.email && SESSION.email.toLowerCase()!==d.email.toLowerCase()){
+    clearLocalSession(); authMessage('La cuenta cambió. Entra otra vez para proteger Mi Lista.',true); return;
   }
   SESSION.email = d.email; if(d.email) localStorage.setItem('plaza_email', d.email);
   $('#listuser').textContent = '· ' + (d.email||'');
@@ -1039,6 +1282,7 @@ async function loadList(){
   $('#listview').classList.remove('hidden');
   setList(d);
   renderList(d);
+  renderPendingReview();
   $('#digesttog').checked = !!d.digest_enabled;
   $('#profile-card').classList.remove('hidden');
   $('#assistant-card').classList.remove('hidden');
@@ -1269,18 +1513,51 @@ async function toggleDigest(cb){
   }finally{ lbl.classList.remove('busy'); }
 }
 
-async function flushPending(){
-  const p = getPending(); if(!p.length) return;
-  let ok = 0;
+function renderPendingReview(){
+  const box=$('#pending-review'), pending=getPending();
+  box.replaceChildren();
+  box.classList.toggle('hidden',!pending.length || !SESSION.token);
+  if(!pending.length || !SESSION.token) return;
+  const identity={token:SESSION.token,id:SESSION.userId,email:SESSION.email};
+  const message=document.createElement('p');
+  message.textContent=`Tienes ${pending.length} producto(s) pendientes. Cuenta verificada: ${identity.email}. Revisa la cuenta antes de guardar estos productos en Mi Lista.`;
+  const button=document.createElement('button'); button.className='plaza-cta'; button.type='button';
+  button.textContent='GUARDAR EN ESTA CUENTA';
+  button.onclick=async()=>{
+    if(!identity.id || SESSION.token!==identity.token || SESSION.userId!==identity.id || SESSION.email!==identity.email){
+      toast('La cuenta cambió. Revisa la lista antes de guardar.',{err:true}); return;
+    }
+    button.disabled=true;
+    await flushPending(identity);
+    if(SESSION.userId===identity.id && SESSION.email===identity.email &&
+       sessionMatches(sessionSnapshot())) await loadList();
+  };
+  box.append(message,button);
+}
+async function flushPending(identity){
+  if(!identity || !identity.id || !identity.email ||
+     !sessionMatches({...identity,refresh:SESSION.refresh})) return;
+  let reviewed=sessionSnapshot();
+  const pendingRaw=localStorage.getItem(PENDING_KEY);
+  const p=getPending(); if(!p.length) return;
+  let ok=0, failed=[];
   for(const x of p){
+    if(!sessionMatches(reviewed)) return;
+    if(!x || typeof x.product_norm!=='string' || !x.product_norm.trim()){ failed.push(x); continue; }
     try{
       await apiAuth('/api/list/items?product_norm='+encodeURIComponent(x.product_norm)+
         '&display_name='+encodeURIComponent(x.display_name||'')+(x.size?'&size='+encodeURIComponent(x.size):''), {method:'POST'});
+      // apiAuth only returns after validating this account, including a 401 refresh.
+      if(SESSION.userId!==identity.id || SESSION.email!==identity.email ||
+         !sessionMatches(sessionSnapshot())) return;
+      reviewed=sessionSnapshot();
       ok++;
-    }catch(e){ if(!SESSION.token) return; }
+    }catch(e){ failed.push(x); }
   }
-  setPending([]);
-  if(ok){ JUST_IN = false; toast(`<b>✓ ${ok} producto${ok>1?'s':''}</b> guardado${ok>1?'s':''} en tu lista`, {action:{label:'VER LISTA', fn:goList}}); }
+  if(!sessionMatches(reviewed) || localStorage.getItem(PENDING_KEY)!==pendingRaw) return;
+  setPending(failed);
+  if(ok) toast(`<b>✓ ${ok} producto${ok>1?'s':''}</b> guardado${ok>1?'s':''} en tu lista`,{action:{label:'VER LISTA',fn:goList}});
+  if(failed.length) toast('Algunos productos no se pudieron guardar. Puedes intentarlo de nuevo.',{err:true});
 }
 
 $('#assistant-form').addEventListener('submit', e=>{
@@ -1295,76 +1572,47 @@ $('#assistant-suggestions').addEventListener('click', e=>{
 });
 
 async function loadMarketAnalytics(){
-  try {
-    const [ov, proj, catComp] = await Promise.all([
-      j('/api/analytics/overview'),
-      j('/api/analytics/basket_projections'),
-      j('/api/analytics/category_comparison')
-    ]);
-
-    const sum = ov.summary || {};
-    $('#analytics-kpis').innerHTML = `
-      <div class="analytics-card">
-        <h3>Descuento Promedio</h3>
-        <div class="analytics-val" style="color:var(--mamey)">${sum.avg_discount_pct != null ? sum.avg_discount_pct + '%' : '—'}</div>
-        <div class="analytics-sub">${sum.discount_offers || 0} ofertas con rebaja activa</div>
-      </div>
-      <div class="analytics-card">
-        <h3>Variación de Precios</h3>
-        <div class="analytics-val" style="color:var(--sea)">${ov.top_dispersion?.length || 0} prod.</div>
-        <div class="analytics-sub">con diferencia entre cadenas</div>
-      </div>
-      <div class="analytics-card">
-        <h3>Categorías Monitoreadas</h3>
-        <div class="analytics-val" style="color:var(--uva)">${sum.categories_count || 0}</div>
-        <div class="analytics-sub">${sum.distinct_products || 0} productos rastreados</div>
-      </div>
-    `;
-
-    const totals = proj.chain_totals || {};
-    const chainKeys = Object.keys(totals);
-    if(chainKeys.length){
-      let html = `<table class="comp-table"><thead><tr><th>cadena</th><th>cobertura</th><th>1 sem</th><th>2 sem</th><th>4 sem</th></tr></thead><tbody>`;
-      chainKeys.forEach(cn => {
-        const row = totals[cn];
-        html += `<tr>
-          <td style="color:${COLORS[cn]||'var(--ink)'};font-weight:700">${cn}</td>
-          <td>${row.items_covered}/${row.total_staples} prod.</td>
-          <td class="price">${money(row.proj_1wk)}</td>
-          <td style="color:var(--sea);font-weight:700">${money(row.proj_2wk)}</td>
-          <td style="color:var(--sol);font-weight:800">${money(row.proj_4wk)}</td>
-        </tr>`;
-      });
-      html += `</tbody></table>`;
-      $('#basket-proj-box').innerHTML = html;
-    } else {
-      $('#basket-proj-box').innerHTML = `<div style="color:var(--dim);font-size:12px">Se calcula al registrar las ofertas semanales</div>`;
-    }
-
-    const cats = catComp.categories || [];
-    if(cats.length){
-      let html = `<table class="comp-table"><thead><tr><th>categoría</th><th>ofertas</th><th>cadena más económica</th></tr></thead><tbody>`;
-      cats.slice(0, 10).forEach(c => {
-        html += `<tr>
-          <td style="font-weight:700;color:var(--ink)">${esc(c.category)}</td>
-          <td>${c.total_offers}</td>
-          <td style="color:${COLORS[c.cheapest_chain]||'var(--mamey)'};font-weight:700">${esc(c.cheapest_chain)}</td>
-        </tr>`;
-      });
-      html += `</tbody></table>`;
-      $('#category-comp-box').innerHTML = html;
-    } else {
-      $('#category-comp-box').innerHTML = `<div style="color:var(--dim);font-size:12px">Se calcula al registrar las ofertas semanales</div>`;
-    }
-  } catch(e) {
-    console.error('Error cargando analíticas:', e);
+  const status=$('#analytics-status'), cards=$('#analytics-kpis'), list=$('#comparable-rows');
+  status.textContent='Cargando especiales anunciados…'; cards.textContent=''; list.textContent='';
+  try{
+    const r=await fetch(API+'/api/analytics/comparable_offers');
+    if(!r.ok) throw new Error('unavailable');
+    const d=await r.json();
+    if(d.scope!=='advertised_specials_only' || !Array.isArray(d.rows) ||
+       !/^\d{4}-\d{2}-\d{2}$/.test(d.as_of||'') ||
+       ![d.active_offers,d.active_chains,d.matched_cohorts].every(v=>Number.isSafeInteger(v)&&v>=0))
+      throw new Error('invalid snapshot');
+    cards.innerHTML=[['Ofertas anunciadas vigentes',d.active_offers],
+      ['Cadenas con ofertas',d.active_chains],['Coincidencias entre cadenas',d.matched_cohorts]]
+      .map(([label,value])=>`<div class="analytics-card"><h3>${label}</h3><div class="analytics-val">${value}</div></div>`).join('');
+    // Keep incomplete or bulk-only offers out even if an older API supplies them.
+    const rows=d.rows.filter(row=>Array.isArray(row.chains) &&
+      new Set(row.chains.map(c=>c.chain_slug)).size>=2 &&
+      row.chains.every(c=>!/(?<!\w)\d+\s*(?:\/\s*\$?\s*\d+|[x×]\s*\$?\s*\d+|por\s+\$?\s*\d+)/i.test(c.promo||'') &&
+        Number.isFinite(Number(c.price_sale)) && Number(c.price_sale)>0));
+    status.textContent=`Selección de ${rows.length} de ${d.matched_cohorts} coincidencias vigentes · corte ${d.as_of}`;
+    if(!rows.length){status.textContent='Sin ofertas comparables en la selección actual · corte '+d.as_of; return;}
+    list.innerHTML=rows.map(row=>`<article class="offer-row">
+      <h3>${esc(row.product_norm)}</h3>
+      <p class="offer-meta">${esc(row.brand)} · ${esc(row.size_canonical)} · base: ${esc(row.price_basis)}</p>
+      <div class="offer-chains">${row.chains.map(c=>{
+        let link='';
+        try{ const url=new URL(c.source_url); if(url.protocol==='https:')
+          link=`<a href="${esc(url.href)}" target="_blank" rel="noopener noreferrer">ver anuncio ↗</a>`; }catch(e){}
+        return `<div class="offer-chain"><span>${esc(c.chain_slug)}</span> <strong>${money(c.price_sale)}</strong>
+          <div class="offer-validity">Válido ${esc(c.valid_from)} – ${esc(c.valid_to)}</div>
+          ${c.promo?`<div class="offer-validity">Condición: ${esc(c.promo)}</div>`:''}${link}</div>`;
+      }).join('')}</div></article>`).join('');
+  }catch(e){
+    cards.textContent=''; list.textContent='';
+    status.textContent='No se pudo cargar la comparación. Intenta de nuevo más tarde.';
   }
 }
 
-captureTokenFromUrl();
-loadStats(); loadMovers(); loadMarketAnalytics();
+loadAuthSettings();
+captureTokenFromUrl().then(()=>{ if(SESSION.token && !AUTH.recoveryToken && $('#listview').classList.contains('hidden')) bootSession(); });
+loadStats(); loadMarketAnalytics();
 updateChip();
-if(SESSION.token) flushPending().then(()=>{ if(SESSION.token) loadList(); });
 </script>
 </body>
 </html>

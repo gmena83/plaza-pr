@@ -3,10 +3,17 @@
 Base URL (production): `https://plaza-pr-api.fly.dev`
 Base URL (local): `http://127.0.0.1:8200`
 
-Public endpoints are read-only GET. CORS is open (`allow_origins=["*"]`).
-List endpoints are authenticated (Supabase bearer token).
+Public price endpoints are read-only GET. CORS is open (`allow_origins=["*"]`).
+List/profile/assistant endpoints require a Supabase bearer token, and the
+owner-scoped list/profile mutation routes require explicit user action.
 Only offers where `valid_from <= today <= valid_to` appear in "current"
 endpoints; history endpoints span all weeks.
+
+**Release separation:** The new comparable-offers and Auth frontend changes
+described below are under review on `release/full-readiness-20261017` and are
+**not** on live Fly release 9 or the manually deployed Netlify dashboard.
+Check `docs/RELEASE_READINESS_2026-10-17.md` before enabling providers or
+publishing this version.
 
 ## Dashboard
 - `GET /` — the single-file dashboard HTML.
@@ -52,17 +59,55 @@ endpoints; history endpoints span all weeks.
   `action` is one of `buy_now | buy_soon | wait | buy_cheapest`.
 
 ## History & movers
-- `GET /api/history/{product}` -> weekly best-price points across chains (from
-  `v_price_history`), for the dashboard search chart.
-- `GET /api/movers?direction=down|up&limit=N` -> biggest week-over-week price
-  movers (from `v_price_trend`). Empty until >=2 weeks of history exist.
+- `GET /api/history/{product}` -> minimum advertised price per normalized name,
+  chain and edition (from `v_price_history`), for the dashboard search chart.
+  Different packs, brands or purchase conditions may share that name; adjacent
+  points are **not** verified same-item price changes.
+- `GET /api/movers?direction=down|up&limit=N` -> legacy arithmetic changes in
+  those minimum advertised prices (from `v_price_trend`). This endpoint remains
+  for compatibility but is **not** a comparable-week price-drop or savings
+  metric. The unreleased dashboard no longer displays its percentage ranking;
+  it explains the history limitation beside the chart.
+
+## Selected comparable advertised specials (unreleased candidate)
+
+- `GET /api/analytics/comparable_offers` ->
+  `{as_of, scope:"advertised_specials_only", active_offers, active_chains,
+  matched_cohorts, rows:[{product_norm, brand, size_canonical, price_basis,
+  chains:[{chain_slug, price_sale, valid_from, valid_to, source_url, promo}]}]}`.
+- For this endpoint, `as_of` and the inclusive printed-date filter use the
+  **America/Puerto_Rico calendar day**, computed in Python independently of
+  the database session timezone (including a UTC session after UTC midnight).
+- `active_offers` and `active_chains` count all date-valid positive-price
+  advertised offers, including those with quantity-dependent promotions.
+  `matched_cohorts` counts the **eligible** exact-name/normalized-brand/
+  canonical-pack/price-basis matches across two or more distinct chains after
+  excluding quantity-dependent multi-buy promos (`2/$4`, `2x$3`, `2x1`,
+  `2 x 1`, `2 por 1`, prefixed wording such as `Oferta 2/$4`, and tested
+  equivalents). `rows` is only the first **100**
+  deterministically sorted cohorts, not the full matched set. Within each
+  cohort, `price_sale` is the lowest currently recorded eligible offer per
+  chain. A source link may be absent; validity and availability still require
+  checking the printed announcement or store.
+- Exact textual matching is a conservative heuristic, **not** verified SKU
+  identity, full inventory coverage or a comparable whole basket. It says
+  nothing about future weeks. The previously merged
+  `/api/analytics/overview`, `/api/analytics/category_comparison` and
+  `/api/analytics/basket_projections` endpoints return **410 Gone** in this
+  candidate; none is present on the currently deployed Fly release.
 
 ## User lists (authenticated)
 
-Auth: Supabase email magic link. The frontend stores `access_token` /
-`refresh_token` in localStorage and sends `Authorization: Bearer <token>`.
-The API validates the token against `{SUPABASE_URL}/auth/v1/user`; it never
-accepts a client-provided user ID. Password signup is deferred.
+The currently deployed Auth journey is a Supabase email magic link. The
+unreleased frontend defaults to that path and only exposes password signup
+after public Auth settings confirm email ownership is required; Google is
+hidden while its provider remains disabled. Password recovery and callback
+identity review are candidate code paths, **not** successful protected-site
+end-to-end tests. The frontend stores `access_token`/`refresh_token` in
+localStorage and sends an `Authorization: Bearer …` header to the API; never
+include an actual bearer token in logs or examples. The API validates it
+against `{SUPABASE_URL}/auth/v1/user`; it never accepts a client-provided
+user ID. Production signup confirmation and Google OAuth are not configured.
 
 - `GET /api/list` -> the caller's list with per-item best offer, per-chain
   basket ranking, `verdict` (cheapest full basket this week) and

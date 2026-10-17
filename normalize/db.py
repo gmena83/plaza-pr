@@ -17,6 +17,18 @@ ROOT = Path(__file__).resolve().parent.parent
 
 log = logging.getLogger("pr-shopper.db")
 
+
+class OfferIdentityConflict(RuntimeError):
+    """The deployed unique key would discard a distinct observed variant."""
+
+
+def _row_constraint_error(exc):
+    """Only a row constraint is safe to skip; operational errors fail the run."""
+    if isinstance(exc, sqlite3.IntegrityError):
+        return True
+    from psycopg2 import IntegrityError
+    return isinstance(exc, IntegrityError)
+
 SCHEMA = ROOT / "normalize" / "schema.sql"
 SCHEMA_PG = ROOT / "normalize" / "schema_pg.sql"
 
@@ -69,6 +81,15 @@ def start_run(conn, chain_slug: str, source: str, valid_from, valid_to) -> int:
 
 
 def finish_run(conn, run_id: int, status: str, offers_found: int, error: str | None = None):
+    if status != "ok":
+        # The running marker was committed by start_run; never commit partial
+        # offers/products from a failed chain (including backfill callers).
+        conn.rollback()
+        offers_found = 0
+    else:
+        offers_found = conn.execute(
+            "SELECT COUNT(*) AS n FROM offers WHERE run_id=?",
+            (run_id,)).fetchone()["n"]
     conn.execute(
         "UPDATE scrape_runs SET finished_at=datetime('now'), status=?, offers_found=?, error=? "
         "WHERE id=?", (status, offers_found, error, run_id))
@@ -131,31 +152,43 @@ def upsert_product(conn, product_norm: str, display: str, brand: str | None,
                             "brand": brand, "category": category}])
 
 
-def dedup_offers(conn, chain_slug: str, valid_from: str) -> int:
-    """Collapse exact duplicate offers for a chain+week: same product_norm and
-    price_sale scraped from overlapping pages (e.g. Econo home + category
-    screenshots). Keeps the row with the most complete size/unit data, deletes
-    the rest. Returns number of rows removed."""
+def dedup_offers(conn, chain_slug: str, valid_from: str, run_id: int | None = None) -> int:
+    """Remove identical printed offers within the current run only.
+    Never rewrite completed history or erase uncertain variants."""
+    if run_id is None:
+        # Backfill and older callers pass only chain/week. Refuse an ambiguous
+        # scope rather than sweeping rows belonging to another run.
+        running = conn.execute(
+            """SELECT id FROM scrape_runs WHERE chain_slug=? AND valid_from=?
+               AND status='running'""", (chain_slug, valid_from)).fetchall()
+        if len(running) != 1:
+            raise ValueError("dedup requires exactly one running run or explicit run_id")
+        run_id = running[0]["id"]
     rows = conn.execute(
-        """SELECT id, product_norm, price_sale,
-                  (CASE WHEN size_canonical IS NOT NULL THEN 1 ELSE 0 END
-                   + CASE WHEN unit_price IS NOT NULL THEN 1 ELSE 0 END
-                   + CASE WHEN brand IS NOT NULL THEN 1 ELSE 0 END
-                   + CASE WHEN promo IS NOT NULL THEN 1 ELSE 0 END) AS richness
-           FROM offers WHERE chain_slug=? AND valid_from=?""",
-        (chain_slug, valid_from)).fetchall()
+        """SELECT id, product_norm, product_raw, price_sale, size_canonical,
+                  size_text, brand, sku, promo, unit_price, price_regular, valid_to,
+                  category
+           FROM offers WHERE chain_slug=? AND valid_from=? AND run_id=?""",
+        (chain_slug, valid_from, run_id)).fetchall()
     from collections import defaultdict
     groups = defaultdict(list)
     for r in rows:
-        groups[(r["product_norm"], r["price_sale"])].append((r["id"], r["richness"]))
+        size = r["size_canonical"] or r["size_text"]
+        if not r["product_norm"] or not size or r["price_sale"] is None:
+            continue
+        key = (r["product_norm"], r["product_raw"], r["price_sale"],
+               size, r["brand"], r["sku"], r["promo"], r["category"],
+               r["price_regular"], r["valid_to"])
+        richness = sum(r[field] is not None for field in
+                       ("size_canonical", "unit_price", "brand", "promo"))
+        groups[key].append((r["id"], richness))
     to_delete = []
     for ids in groups.values():
         if len(ids) > 1:
-            ids.sort(key=lambda x: x[1], reverse=True)  # richest first
+            ids.sort(key=lambda x: (-x[1], x[0]))
             to_delete.extend(i for i, _ in ids[1:])
     if to_delete:
         conn.executemany("DELETE FROM offers WHERE id=?", [(i,) for i in to_delete])
-        conn.commit()
         log.info("[%s] dedup removed %d duplicate rows", chain_slug, len(to_delete))
     return len(to_delete)
 
@@ -163,7 +196,7 @@ def dedup_offers(conn, chain_slug: str, valid_from: str) -> int:
 def upsert_offers(conn, run_id: int, chain_slug: str, offers: list[dict],
                   valid_from=None, valid_to=None) -> int:
     offer_params = []
-    product_records = []
+    generated_keys = []
     for o in offers:
         try:
             parsed = units.parse_size(o.get("size_text"))
@@ -172,6 +205,7 @@ def upsert_offers(conn, run_id: int, chain_slug: str, offers: list[dict],
             if not sku:
                 # generated key: chain + normalized product + canonical size
                 sku = f"{chain_slug}:{o.get('product_norm')}|{(parsed or {}).get('canonical') or o.get('size_text') or ''}"
+            generated_keys.append(not o.get("sku"))
             offer_params.append((
                 run_id, chain_slug, o.get("product_raw"), o.get("product_norm"), sku,
                 o.get("brand"), o.get("size_text"), o.get("price_sale"),
@@ -182,45 +216,172 @@ def upsert_offers(conn, run_id: int, chain_slug: str, offers: list[dict],
                 parsed and parsed.get("base_qty"),
                 parsed and parsed.get("base_unit"), pbasis
             ))
-            product_records.append({
-                "product_norm": o.get("product_norm"),
-                "display": o.get("product_raw"),
-                "brand": o.get("brand"),
-                "category": o.get("category"),
-            })
-        except Exception as e:
-            log.warning("offer processing failed: %s -> %s", e, o.get("product_raw"))
+        except Exception:
+            log.exception("offer processing failed before insert")
+            raise
 
-    if offer_params:
-        try:
-            conn.executemany(
-                """INSERT INTO offers
-                   (run_id, chain_slug, product_raw, product_norm, sku, brand, size_text,
-                    price_sale, price_regular, unit_price, unit_basis, promo, category,
-                    page, valid_from, valid_to, source_url,
-                    size_canonical, base_qty, base_unit, price_basis)
-                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                   ON CONFLICT(chain_slug, product_norm, size_text, price_sale, valid_from)
-                   DO NOTHING""",
-                offer_params)
-        except Exception as e:
-            log.warning("batch offer insert failed: %s; retrying individually", e)
+    if not offer_params:
+        return 0
+
+    insert_sql = """INSERT INTO offers
+        (run_id, chain_slug, product_raw, product_norm, sku, brand, size_text,
+         price_sale, price_regular, unit_price, unit_basis, promo, category,
+         page, valid_from, valid_to, source_url,
+         size_canonical, base_qty, base_unit, price_basis)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT DO NOTHING"""
+    # Keep the entire ingestion in the caller's transaction. The run's final
+    # status and these rows are committed together by finish_run().
+    # SQLite RELEASE of an outermost SAVEPOINT implicitly commits. Open an
+    # explicit transaction so the caller still owns the final commit/rollback.
+    if isinstance(conn, sqlite3.Connection) and not conn.in_transaction:
+        conn.execute("BEGIN")
+    conn.execute("SAVEPOINT offer_ingest")
+    try:
+        # Existing imports may have NULL SKU where this writer now generates
+        # one. Neither the old nor the draft index can establish that the two
+        # keys are distinct; quarantine the replay instead of duplicating it.
+        stable_fields = {"chain_slug": 1, "product_raw": 2,
+                         "product_norm": 3, "brand": 5, "size_text": 6,
+                         "price_sale": 7, "price_regular": 8, "promo": 11,
+                         "category": 12, "valid_from": 14, "valid_to": 15}
+        for params, generated in zip(offer_params, generated_keys):
+            if not generated:
+                continue
+            predicates = ["sku IS NULL"]
+            values = []
+            for column, index in stable_fields.items():
+                if params[index] is None:
+                    predicates.append(f"{column} IS NULL")
+                else:
+                    predicates.append(f"{column}=?")
+                    values.append(params[index])
+            if conn.execute("SELECT id FROM offers WHERE " +
+                            " AND ".join(predicates) + " LIMIT 1",
+                            values).fetchone():
+                raise OfferIdentityConflict(
+                    "offer identity collision: legacy NULL SKU requires manual reconciliation")
+        legacy_unique = True
+        if hasattr(conn, "_conn"):
+            legacy_unique = bool(conn.execute(
+                """SELECT 1 FROM pg_constraint WHERE conrelid='offers'::regclass
+                   AND conname='offers_chain_slug_product_norm_size_text_price_sale_valid_f_key'"""
+            ).fetchone())
+            if not legacy_unique and not conn.execute(
+                """SELECT 1 FROM pg_indexes WHERE schemaname=current_schema()
+                   AND tablename='offers' AND indexname='offers_identity_v2'"""
+            ).fetchone():
+                raise RuntimeError("unsupported offers identity schema")
+        # The live unique constraint omits these variant-defining fields. Until
+        # an audited migration replaces it, refuse a conflicting observation
+        # rather than letting ON CONFLICT silently discard it. This check also
+        # catches collisions between rows of the same incoming batch.
+        def stored_variant(row):
+            return (row["product_raw"], row["sku"], row["brand"],
+                    row["price_regular"], row["promo"], row["category"],
+                    str(row["valid_to"]) if row["valid_to"] is not None else None)
+
+        seen_keys = {}
+        if legacy_unique:
             for params in offer_params:
-                try:
-                    conn.execute(
-                        """INSERT INTO offers
-                           (run_id, chain_slug, product_raw, product_norm, sku, brand, size_text,
-                            price_sale, price_regular, unit_price, unit_basis, promo, category,
-                            page, valid_from, valid_to, source_url,
-                            size_canonical, base_qty, base_unit, price_basis)
-                           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                           ON CONFLICT(chain_slug, product_norm, size_text, price_sale, valid_from)
-                           DO NOTHING""",
-                        params)
-                except Exception as ex:
-                    log.warning("fallback offer insert failed: %s", ex)
+                key = (params[1], params[3], params[6], params[7], params[14])
+                if any(value is None for value in key):
+                    continue
+                variant = (params[2], params[4], params[5], params[8],
+                           params[11], params[12], params[15])
+                previous = seen_keys.get(key)
+                if previous is None:
+                    row = conn.execute(
+                        """SELECT product_raw, sku, brand, price_regular, promo,
+                                  category, valid_to FROM offers WHERE chain_slug=?
+                           AND product_norm=? AND size_text=? AND price_sale=?
+                           AND valid_from=? LIMIT 1""", key).fetchone()
+                    previous = stored_variant(row) if row else variant
+                if previous != variant:
+                    raise OfferIdentityConflict(
+                        "offer identity collision: legacy unique key excludes a distinct variant")
+                seen_keys[key] = variant
+        previous_id = conn.execute(
+            "SELECT COALESCE(MAX(id), 0) AS id FROM offers WHERE run_id=?",
+            (run_id,)).fetchone()["id"]
+        def insert_one(params):
+            conn.execute("SAVEPOINT offer_row")
+            try:
+                conn.execute(insert_sql, params)
+            except Exception:
+                conn.execute("ROLLBACK TO SAVEPOINT offer_row")
+                # A rejected row invalidates the whole capture, not just this
+                # row. The outer savepoint discards any earlier valid rows.
+                raise
+            finally:
+                conn.execute("RELEASE SAVEPOINT offer_row")
 
-        upsert_products(conn, product_records)
-        conn.commit()
+        complete = [p for p in offer_params if all(p[i] is not None for i in
+                    (3, 6, 7, 14))]
+        incomplete = [p for p in offer_params if any(p[i] is None for i in
+                      (3, 6, 7, 14))]
+        conn.execute("SAVEPOINT offer_batch")
+        try:
+            if complete:
+                conn.executemany(insert_sql, complete)
+        except Exception as e:
+            if not _row_constraint_error(e):
+                raise
+            log.warning("batch offer insert failed: %s; retrying individually", e)
+            # SQLite may have inserted a prefix; Postgres aborts the entire
+            # transaction. In both cases rollback the batch before retrying.
+            conn.execute("ROLLBACK TO SAVEPOINT offer_batch")
+            for params in complete:
+                insert_one(params)
+        finally:
+            conn.execute("RELEASE SAVEPOINT offer_batch")
 
-    return len(offer_params)
+        if legacy_unique:
+            # A concurrent writer can commit a distinct variant after our
+            # precheck and before ON CONFLICT DO NOTHING resolves. Read the
+            # winning row *after* the insert; a missing/invisible row is also
+            # unsafe (e.g. stricter transaction isolation).
+            for key, variant in seen_keys.items():
+                row = conn.execute(
+                    """SELECT product_raw, sku, brand, price_regular, promo,
+                              category, valid_to FROM offers WHERE chain_slug=?
+                       AND product_norm=? AND size_text=? AND price_sale=?
+                       AND valid_from=? LIMIT 1""", key).fetchone()
+                if row is None or stored_variant(row) != variant:
+                    raise OfferIdentityConflict(
+                        "offer identity collision: concurrent legacy writer retained a distinct variant")
+
+        # SQL UNIQUE treats NULL as distinct. Match stable printed identity,
+        # not the page or fetch URL (which can change between captures).
+        # This exact check is provisional until a database uniqueness migration.
+        identity = {"chain_slug": 1, "product_raw": 2, "product_norm": 3,
+                    "sku": 4, "brand": 5, "size_text": 6, "price_sale": 7,
+                    "price_regular": 8, "promo": 11, "category": 12,
+                    "valid_from": 14, "valid_to": 15}
+        for params in incomplete:
+            predicates = []
+            values = []
+            for column, index in identity.items():
+                if params[index] is None:
+                    predicates.append(f"{column} IS NULL")
+                else:
+                    predicates.append(f"{column}=?")
+                    values.append(params[index])
+            if conn.execute("SELECT id FROM offers WHERE " +
+                            " AND ".join(predicates) + " LIMIT 1",
+                            values).fetchone() is None:
+                insert_one(params)
+
+        inserted = conn.execute(
+            """SELECT product_norm, product_raw, brand, category
+               FROM offers WHERE run_id=? AND id>? ORDER BY id""",
+            (run_id, previous_id)).fetchall()
+        upsert_products(conn, [{"product_norm": r["product_norm"],
+                                "display": r["product_raw"], "brand": r["brand"],
+                                "category": r["category"]} for r in inserted])
+        conn.execute("RELEASE SAVEPOINT offer_ingest")
+        return len(inserted)
+    except Exception:
+        conn.execute("ROLLBACK TO SAVEPOINT offer_ingest")
+        conn.execute("RELEASE SAVEPOINT offer_ingest")
+        raise

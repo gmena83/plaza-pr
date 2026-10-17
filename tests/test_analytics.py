@@ -1,95 +1,74 @@
-"""Test market analytics, basket projections and category comparison endpoints."""
+"""Deprecated analytics must not publish unequal-basket or future-price claims."""
 import sqlite3
+import pytest
 from fastapi.testclient import TestClient
 from api.main import app
 from normalize import db
 
-client = TestClient(app)
+
+@pytest.mark.parametrize("fail_query", [False, True])
+def test_comparable_offers_read_never_initializes_schema_and_closes_connection(
+        monkeypatch, tmp_path, fail_query):
+    db_path = tmp_path / "analytics.db"
+    setup = db.connect(db_path)
+    db.init_db(setup)
+    setup.close()
+
+    class TrackedConnection:
+        def __init__(self):
+            self.connection = sqlite3.connect(db_path)
+            self.connection.row_factory = sqlite3.Row
+            self.closed = False
+
+        def execute(self, sql, *args):
+            if fail_query:
+                raise RuntimeError("query failed")
+            return self.connection.execute(sql, *args)
+
+        def close(self):
+            self.closed = True
+            self.connection.close()
+
+    connections = []
+
+    def connect(_dsn):
+        connection = TrackedConnection()
+        connections.append(connection)
+        return connection
+
+    def no_ddl(_conn):
+        raise AssertionError("read endpoint must not execute schema DDL")
+
+    monkeypatch.setattr(db, "connect", connect)
+    monkeypatch.setattr(db, "dsn_from_env", lambda cfg: str(db_path))
+    monkeypatch.setattr(db, "init_db", no_ddl)
+    response = TestClient(app, raise_server_exceptions=False).get(
+        "/api/analytics/comparable_offers")
+    assert response.status_code == (500 if fail_query else 200)
+    assert len(connections) == 1
+    assert connections[0].closed
 
 
-def test_analytics_overview_endpoint(monkeypatch, tmp_path):
-    db_path = tmp_path / "test_shopper.db"
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    db.init_db(conn)
-
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO scrape_runs(chain_slug, status, offers_found, valid_from, valid_to) "
-        "VALUES ('pueblo', 'ok', 2, date('now', '-1 day'), date('now', '+5 days'))"
-    )
-    run_id = cur.lastrowid
-    cur.execute(
-        "INSERT INTO offers(run_id, chain_slug, product_raw, product_norm, price_sale, price_regular, unit_price, category, valid_from, valid_to) "
-        "VALUES (?, 'pueblo', 'Leche 128oz', 'leche', 3.99, 4.99, 0.03, 'Lácteos', date('now', '-1 day'), date('now', '+5 days'))",
-        (run_id,)
-    )
-    conn.commit()
-
-    conn.close()
-    monkeypatch.setattr("api.main._conn", lambda: db.connect(str(db_path)))
-
-    r = client.get("/api/analytics/overview")
-    assert r.status_code == 200
-    data = r.json()
-    assert "summary" in data
-    assert "per_chain" in data
-    assert "categories" in data
-    assert "top_dispersion" in data
+@pytest.mark.parametrize("route", [
+    "/api/analytics/overview",
+    "/api/analytics/category_comparison",
+    "/api/analytics/basket_projections",
+])
+def test_old_analytics_routes_reject_misleading_comparisons(route, monkeypatch):
+    def no_database():
+        raise AssertionError("retired route must not query the database")
+    monkeypatch.setattr("api.main._conn", no_database)
+    response = TestClient(app, raise_server_exceptions=False).get(route)
+    assert response.status_code == 410
+    assert response.json() == {"detail": "Analytics endpoint retired; use /api/analytics/comparable_offers"}
 
 
-def test_analytics_category_comparison_endpoint(monkeypatch, tmp_path):
-    db_path = tmp_path / "test_shopper.db"
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    db.init_db(conn)
-
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO scrape_runs(chain_slug, status, offers_found, valid_from, valid_to) "
-        "VALUES ('amigo', 'ok', 1, date('now', '-1 day'), date('now', '+5 days'))"
-    )
-    run_id = cur.lastrowid
-    cur.execute(
-        "INSERT INTO offers(run_id, chain_slug, product_raw, product_norm, price_sale, category, valid_from, valid_to) "
-        "VALUES (?, 'amigo', 'Arroz 3lb', 'arroz', 1.99, 'Granos', date('now', '-1 day'), date('now', '+5 days'))",
-        (run_id,)
-    )
-    conn.commit()
-
-    conn.close()
-    monkeypatch.setattr("api.main._conn", lambda: db.connect(str(db_path)))
-
-    r = client.get("/api/analytics/category_comparison")
-    assert r.status_code == 200
-    data = r.json()
-    assert "categories" in data
-
-
-def test_analytics_basket_projections_endpoint(monkeypatch, tmp_path):
-    db_path = tmp_path / "test_shopper.db"
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    db.init_db(conn)
-
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO scrape_runs(chain_slug, status, offers_found, valid_from, valid_to) "
-        "VALUES ('selectos', 'ok', 1, date('now', '-1 day'), date('now', '+5 days'))"
-    )
-    run_id = cur.lastrowid
-    cur.execute(
-        "INSERT INTO offers(run_id, chain_slug, product_raw, product_norm, price_sale, valid_from, valid_to) "
-        "VALUES (?, 'selectos', 'Café 10oz', 'cafe', 5.99, date('now', '-1 day'), date('now', '+5 days'))",
-        (run_id,)
-    )
-    conn.commit()
-
-    conn.close()
-    monkeypatch.setattr("api.main._conn", lambda: db.connect(str(db_path)))
-
-    r = client.get("/api/analytics/basket_projections")
-    assert r.status_code == 200
-    data = r.json()
-    assert "chain_totals" in data
-    assert "staples_evaluated" in data
+def test_unexpected_api_failure_has_generic_public_body_and_is_logged(monkeypatch, caplog):
+    def broken_connection():
+        raise RuntimeError("private DSN/password must not appear")
+    monkeypatch.setattr("api.main._analytics_conn", broken_connection)
+    response = TestClient(app, raise_server_exceptions=False).get("/api/analytics/comparable_offers")
+    assert response.status_code == 500
+    assert response.json() == {"error": "Internal server error"}
+    assert "private DSN/password must not appear" not in response.text
+    assert "private DSN/password must not appear" in caplog.text

@@ -41,7 +41,7 @@
 // forward the token hash to the dashboard (Netlify strips hashes on 301s,
 // so OTP links to /app lose the token; this catches root-landed tokens).
 if (location.hash.includes('access_token=')) {
-  location.replace('/app/' + location.hash);
+  location.replace('/app/' + location.search + location.hash);
 }
 </script>
 </head>

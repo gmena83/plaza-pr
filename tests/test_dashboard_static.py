@@ -53,3 +53,25 @@ def test_loginbox_contains_supabase_auth_js_handlers():
     content = APP.read_text()
     for handler in ("loginWithPassword", "signUpWithPassword", "sendMagicLink", "loginWithGoogle", "switchAuthTab"):
         assert handler in content
+
+
+def test_current_specials_section_never_calls_old_forecast_or_category_routes():
+    soup = BeautifulSoup(APP.read_text(), "html.parser")
+    section = soup.select_one("#analytics-section")
+    assert section is not None
+    copy = section.get_text(" ").lower()
+    assert "especiales" in copy and "canasta completa" in copy
+    for claim in ("proyección de canasta básica", "2 sem", "4 sem", "más económico por categoría"):
+        assert claim not in copy
+    script = soup.select_one("script").string
+    for route in ("/api/analytics/basket_projections", "/api/analytics/category_comparison", "/api/analytics/overview"):
+        assert route not in script
+    assert "/api/analytics/comparable_offers" in script
+
+
+def test_unmatched_historical_minima_are_not_shown_as_weekly_price_drops():
+    """The old movers view mixes packs and editions, not same-item weekly prices."""
+    soup = BeautifulSoup(APP.read_text(), "html.parser")
+    assert soup.select_one("#movers") is None
+    assert "mayores bajas de la semana" not in soup.get_text(" ").lower()
+    assert "/api/movers" not in soup.select_one("script").string

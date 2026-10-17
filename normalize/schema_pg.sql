@@ -44,6 +44,9 @@ CREATE TABLE IF NOT EXISTS offers (
     valid_to       DATE,
     source_url     TEXT,
     scraped_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Legacy production constraint. The writer fails closed on variants.
+    -- Draft replacement is migrations/draft_offer_identity_pg.sql; do not
+    -- silently replace this constraint on init_db() or a live GET.
     UNIQUE(chain_slug, product_norm, size_text, price_sale, valid_from)
 );
 

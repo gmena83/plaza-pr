@@ -4,7 +4,7 @@ The shopper product grid is server-rendered paginated HTML at:
   {base}/controllers/products.html?type=shopper&page=N&sort=name&query=&category_id=
 Each card: SKU in /productos/<sku>/..., brand div.font-semibold, name text,
 size in div.text-xs.text-gray-500, price in div.text-lg.font-semibold.
-We paginate until a page returns no product anchors.
+We paginate until two consecutive pages return no product anchors.
 """
 import logging
 import re
@@ -33,6 +33,7 @@ def scrape(chain: dict) -> list[dict]:
     offers: list[dict] = []
     seen_skus: set[str] = set()
     empty_streak = 0
+    terminated = False
 
     for page in range(1, max_pages + 1):
         url = endpoint.format(page=page)
@@ -42,10 +43,12 @@ def scrape(chain: dict) -> list[dict]:
         if not anchors:
             empty_streak += 1
             log.info("%s page %d: no products (streak %d)", slug_name, page, empty_streak)
-            if empty_streak >= 1:
+            if empty_streak >= 2:
+                terminated = True
                 break
             continue
 
+        empty_streak = 0
         new_this_page = 0
         for a in anchors:
             href = a.get("href", "")
@@ -103,8 +106,13 @@ def scrape(chain: dict) -> list[dict]:
                  slug_name, page, new_this_page, len(offers))
         if new_this_page == 0:
             # we've wrapped around to already-seen products -> done
+            terminated = True
             break
 
+    if not offers:
+        raise ValueError(f"{slug_name}: no products found in structured shopper")
+    if not terminated:
+        raise ValueError(f"{slug_name}: page limit {max_pages} reached before end of shopper")
     return offers
 
 
