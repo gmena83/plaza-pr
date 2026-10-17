@@ -154,6 +154,14 @@
   .google-btn{background:#fff !important;color:#000 !important;display:inline-flex;
     align-items:center;justify-content:center;gap:8px;font-weight:700;border:none;cursor:pointer}
   .google-btn svg{width:16px;height:16px;flex:none}
+  .analytics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .analytics-card{background:var(--panel2);border:1px solid var(--line);padding:14px}
+  .analytics-card h3{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+  .analytics-val{font-size:22px;font-weight:800;color:var(--sol)}
+  .analytics-sub{font-size:11px;color:var(--faint);margin-top:4px}
+  .comp-table{width:100%;border-collapse:collapse;font-size:12px}
+  .comp-table th{text-align:left;font-size:10px;color:var(--faint);text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .comp-table td{padding:8px 10px;border-bottom:1px solid var(--panel2)}
   #listview .reco{margin:14px 18px 4px}
   .sublabel{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
     font-weight:600;padding:14px 18px 8px;border-top:1px solid var(--line);margin-top:6px}
@@ -456,6 +464,26 @@
     <div class="card">
       <h2>Mayores bajas de la semana <span class="dot"></span></h2>
       <table id="movers"><tbody><tr><td class="loading">cargando…</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div class="card" id="analytics-section" style="margin-top:20px">
+    <h2>Métricas y Análisis de Mercado <span class="dot"></span></h2>
+    <div style="padding:18px">
+      <div class="analytics-grid" id="analytics-kpis">
+        <div class="analytics-card"><div class="analytics-sub">cargando métricas…</div></div>
+      </div>
+
+      <div class="grid" style="margin-top:16px">
+        <div class="card">
+          <h2>Proyección de Canasta Básica por Cadena <span class="dot"></span></h2>
+          <div style="padding:14px;overflow-x:auto" id="basket-proj-box">cargando proyecciones…</div>
+        </div>
+        <div class="card">
+          <h2>Supermercado Más Económico por Categoría <span class="dot"></span></h2>
+          <div style="padding:14px;overflow-x:auto" id="category-comp-box">cargando comparativa…</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1266,8 +1294,75 @@ $('#assistant-suggestions').addEventListener('click', e=>{
   askAssistant(chip.dataset.ask);
 });
 
+async function loadMarketAnalytics(){
+  try {
+    const [ov, proj, catComp] = await Promise.all([
+      j('/api/analytics/overview'),
+      j('/api/analytics/basket_projections'),
+      j('/api/analytics/category_comparison')
+    ]);
+
+    const sum = ov.summary || {};
+    $('#analytics-kpis').innerHTML = `
+      <div class="analytics-card">
+        <h3>Descuento Promedio</h3>
+        <div class="analytics-val" style="color:var(--mamey)">${sum.avg_discount_pct != null ? sum.avg_discount_pct + '%' : '—'}</div>
+        <div class="analytics-sub">${sum.discount_offers || 0} ofertas con rebaja activa</div>
+      </div>
+      <div class="analytics-card">
+        <h3>Variación de Precios</h3>
+        <div class="analytics-val" style="color:var(--sea)">${ov.top_dispersion?.length || 0} prod.</div>
+        <div class="analytics-sub">con diferencia entre cadenas</div>
+      </div>
+      <div class="analytics-card">
+        <h3>Categorías Monitoreadas</h3>
+        <div class="analytics-val" style="color:var(--uva)">${sum.categories_count || 0}</div>
+        <div class="analytics-sub">${sum.distinct_products || 0} productos rastreados</div>
+      </div>
+    `;
+
+    const totals = proj.chain_totals || {};
+    const chainKeys = Object.keys(totals);
+    if(chainKeys.length){
+      let html = `<table class="comp-table"><thead><tr><th>cadena</th><th>cobertura</th><th>1 sem</th><th>2 sem</th><th>4 sem</th></tr></thead><tbody>`;
+      chainKeys.forEach(cn => {
+        const row = totals[cn];
+        html += `<tr>
+          <td style="color:${COLORS[cn]||'var(--ink)'};font-weight:700">${cn}</td>
+          <td>${row.items_covered}/${row.total_staples} prod.</td>
+          <td class="price">${money(row.proj_1wk)}</td>
+          <td style="color:var(--sea);font-weight:700">${money(row.proj_2wk)}</td>
+          <td style="color:var(--sol);font-weight:800">${money(row.proj_4wk)}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      $('#basket-proj-box').innerHTML = html;
+    } else {
+      $('#basket-proj-box').innerHTML = `<div style="color:var(--dim);font-size:12px">Se calcula al registrar las ofertas semanales</div>`;
+    }
+
+    const cats = catComp.categories || [];
+    if(cats.length){
+      let html = `<table class="comp-table"><thead><tr><th>categoría</th><th>ofertas</th><th>cadena más económica</th></tr></thead><tbody>`;
+      cats.slice(0, 10).forEach(c => {
+        html += `<tr>
+          <td style="font-weight:700;color:var(--ink)">${esc(c.category)}</td>
+          <td>${c.total_offers}</td>
+          <td style="color:${COLORS[c.cheapest_chain]||'var(--mamey)'};font-weight:700">${esc(c.cheapest_chain)}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      $('#category-comp-box').innerHTML = html;
+    } else {
+      $('#category-comp-box').innerHTML = `<div style="color:var(--dim);font-size:12px">Se calcula al registrar las ofertas semanales</div>`;
+    }
+  } catch(e) {
+    console.error('Error cargando analíticas:', e);
+  }
+}
+
 captureTokenFromUrl();
-loadStats(); loadMovers();
+loadStats(); loadMovers(); loadMarketAnalytics();
 updateChip();
 if(SESSION.token) flushPending().then(()=>{ if(SESSION.token) loadList(); });
 </script>

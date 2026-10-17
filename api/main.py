@@ -288,6 +288,164 @@ def recommendation(name: str, size: str | None = None):
             "chain_patterns": result.get("chains", [])}
 
 
+# ─── Market Analytics & Comparisons ──────────────────────────────────────────
+
+@app.get("/api/analytics/overview")
+def analytics_overview():
+    """Market overview KPIs: savings depth, price dispersion, category coverage, and chain competitiveness."""
+    c = _conn()
+    summary = c.execute(
+        "SELECT "
+        "  COUNT(*) as active_offers, "
+        "  COUNT(CASE WHEN price_regular > price_sale THEN 1 END) as discount_offers, "
+        "  ROUND(AVG(CASE WHEN price_regular > price_sale THEN (price_regular - price_sale) / price_regular * 100 END), 1) as avg_discount_pct, "
+        "  COUNT(DISTINCT chain_slug) as active_chains, "
+        "  COUNT(DISTINCT COALESCE(category, 'General')) as categories_count, "
+        "  COUNT(DISTINCT product_norm) as distinct_products "
+        "FROM offers "
+        "WHERE date('now') BETWEEN date(valid_from) AND date(valid_to)"
+    ).fetchone()
+
+    per_chain = c.execute(
+        "SELECT "
+        "  chain_slug, "
+        "  COUNT(*) as active_offers, "
+        "  ROUND(AVG(price_sale), 2) as avg_sale_price, "
+        "  ROUND(AVG(unit_price), 2) as avg_unit_price, "
+        "  COUNT(CASE WHEN price_regular > price_sale THEN 1 END) as discounted_offers, "
+        "  ROUND(AVG(CASE WHEN price_regular > price_sale THEN (price_regular - price_sale) / price_regular * 100 END), 1) as avg_discount_pct "
+        "FROM offers "
+        "WHERE date('now') BETWEEN date(valid_from) AND date(valid_to) "
+        "GROUP BY chain_slug "
+        "ORDER BY active_offers DESC"
+    ).fetchall()
+
+    categories = c.execute(
+        "SELECT "
+        "  COALESCE(category, 'General') as category_name, "
+        "  COUNT(*) as offer_count, "
+        "  ROUND(AVG(price_sale), 2) as avg_price, "
+        "  MIN(price_sale) as min_price, "
+        "  MAX(price_sale) as max_price "
+        "FROM offers "
+        "WHERE date('now') BETWEEN date(valid_from) AND date(valid_to) "
+        "GROUP BY COALESCE(category, 'General') "
+        "ORDER BY offer_count DESC LIMIT 10"
+    ).fetchall()
+
+    dispersion = c.execute(
+        "SELECT "
+        "  product_norm, "
+        "  COUNT(DISTINCT chain_slug) as chain_count, "
+        "  MIN(price_sale) as min_p, "
+        "  MAX(price_sale) as max_p, "
+        "  ROUND((MAX(price_sale) - MIN(price_sale)) / NULLIF(MIN(price_sale), 0) * 100, 1) as spread_pct "
+        "FROM offers "
+        "WHERE date('now') BETWEEN date(valid_from) AND date(valid_to) AND product_norm IS NOT NULL "
+        "GROUP BY product_norm "
+        "HAVING COUNT(DISTINCT chain_slug) >= 2 "
+        "ORDER BY spread_pct DESC LIMIT 10"
+    ).fetchall()
+
+    return {
+        "summary": dict(summary) if summary else {},
+        "per_chain": [dict(r) for r in per_chain],
+        "categories": [dict(r) for r in categories],
+        "top_dispersion": [dict(r) for r in dispersion],
+    }
+
+
+@app.get("/api/analytics/category_comparison")
+def analytics_category_comparison():
+    """Category-by-category price benchmarks across supermarket chains."""
+    c = _conn()
+    rows = c.execute(
+        "SELECT "
+        "  COALESCE(category, 'General') as category, "
+        "  chain_slug, "
+        "  COUNT(*) as offer_count, "
+        "  ROUND(AVG(price_sale), 2) as avg_price, "
+        "  ROUND(AVG(unit_price), 2) as avg_unit_price, "
+        "  MIN(price_sale) as best_price "
+        "FROM offers "
+        "WHERE date('now') BETWEEN date(valid_from) AND date(valid_to) "
+        "GROUP BY COALESCE(category, 'General'), chain_slug "
+        "ORDER BY category, avg_price ASC"
+    ).fetchall()
+
+    grouped: dict = {}
+    for r in rows:
+        d = dict(r)
+        cat = d["category"]
+        grouped.setdefault(cat, []).append(d)
+
+    benchmarks = []
+    for cat, items in grouped.items():
+        sorted_by_avg = sorted(items, key=lambda x: x["avg_price"] or 999999)
+        sorted_by_unit = sorted([x for x in items if x["avg_unit_price"] is not None],
+                                key=lambda x: x["avg_unit_price"])
+        cheapest_chain = sorted_by_avg[0]["chain_slug"] if sorted_by_avg else "N/A"
+        best_unit_chain = sorted_by_unit[0]["chain_slug"] if sorted_by_unit else cheapest_chain
+        benchmarks.append({
+            "category": cat,
+            "total_offers": sum(x["offer_count"] for x in items),
+            "chains_competing": len(items),
+            "cheapest_chain": cheapest_chain,
+            "best_unit_chain": best_unit_chain,
+            "chain_details": items
+        })
+
+    return {"categories": benchmarks}
+
+
+@app.get("/api/analytics/basket_projections")
+def analytics_basket_projections():
+    """Basket projections and store cost comparison across common staple items."""
+    c = _conn()
+    staples = ["leche", "arroz", "cafe", "huevos", "habichuelas", "pollo", "pan", "agua", "aceite", "queso"]
+    basket_matrix = []
+
+    for item in staples:
+        term = f"%{item}%"
+        rows = c.execute(
+            "SELECT chain_slug, MIN(price_sale) as best_price, MIN(unit_price) as best_unit "
+            "FROM offers WHERE product_norm LIKE ? "
+            "AND date('now') BETWEEN date(valid_from) AND date(valid_to) "
+            "GROUP BY chain_slug", (term,)).fetchall()
+        if rows:
+            basket_matrix.append({
+                "staple": item,
+                "prices": {r["chain_slug"]: r["best_price"] for r in rows}
+            })
+
+    chains = [r["slug"] for r in c.execute("SELECT slug FROM chains ORDER BY slug").fetchall()]
+    chain_totals = {}
+    for chain in chains:
+        total = 0.0
+        covered = 0
+        for item_data in basket_matrix:
+            if chain in item_data["prices"]:
+                total += item_data["prices"][chain]
+                covered += 1
+        if covered > 0:
+            chain_totals[chain] = {
+                "total": round(total, 2),
+                "items_covered": covered,
+                "total_staples": len(staples),
+                "proj_1wk": round(total, 2),
+                "proj_2wk": round(total * 2, 2),
+                "proj_4wk": round(total * 4, 2)
+            }
+
+    sorted_chains = dict(sorted(chain_totals.items(), key=lambda x: (-x[1]["items_covered"], x[1]["total"])))
+
+    return {
+        "staples_evaluated": staples,
+        "chain_totals": sorted_chains,
+        "basket_matrix": basket_matrix
+    }
+
+
 # ─── B2B demo (synthetic data while in beta) ─────────────────────────────────
 
 @app.get("/api/b2b/overview")
