@@ -1,6 +1,6 @@
 # PLAZA Sprint 5 — prospective prediction study (not a launched forecast)
 
-Status as of 2026-10-13: **1** complete, paired Pueblo online catalog/shopper edition (printed start 2026-10-07); **0** untouched evaluation cutoffs; **no measured prediction accuracy**. See `data/catalog-pilots/study_evaluation.json` (local, gitignored), `spikes/001-pueblo-catalog/README.md`, and `spikes/001-pueblo-catalog/AUDIT.md`. The archive of printed specials is not a substitute for missing full-catalog weeks (`spikes/002-pueblo-history/AUDIT.md`). The investor card remains explicitly fictitious and is never read by this study.
+Status as of 2026-10-17: **2** complete, paired Pueblo online catalog/shopper editions (printed starts October 7 and 14); **0** untouched evaluation cutoffs; **no measured prediction accuracy**. See `data/catalog-pilots/study_evaluation.json` (gitignored; mt03 collector with a copy on mt01), `spikes/001-pueblo-catalog/README.md`, and `spikes/001-pueblo-catalog/AUDIT.md`. A new archive audit found 14 consecutive *dated flyer first pages* July 15–October 14, but Wayback exposed no complete historical `type=all` catalog; the printed specials cannot fill the missing SKU-priced catalog weeks (`docs/HISTORICAL_SHOPPER_RECON_2026-10-17.md`, `spikes/002-pueblo-history/AUDIT.md`). The investor card remains explicitly fictitious and is never read by this study.
 
 ## Feasibility and cost gate
 
@@ -8,8 +8,8 @@ The 2026-10-13 paired capture returned 20,175 catalog SKUs and 935 shopper SKUs;
 
 ## Collection and provenance
 
-- `spikes/001-pueblo-catalog/research.py` checks the *printed shopper edition* and captures complete `type=shopper` and `type=all` feeds into separate, resumable, checksummed, gitignored folders only when it changes. It compares the new pair with the previous fully compared edition; a shared lock prevents a manual run from colliding with the initial one-off timer. A partial crawl, future-dated edition, or edition change mid-crawl is refused. Week comparison JSON does **not** establish a regular price.
-- The existing one-off follow-up is scheduled for October 15 with October 16 fallback. The recurring study timer checks Thu/Fri/Sun at 11:00 AST to continue the same read-only capture thereafter; an unchanged edition costs only the shopper-page check. On every scheduled run the offline evaluator writes `data/catalog-pilots/study_evaluation.json`; neither job writes to `offers`, the API, user lists, Supabase, or Netlify. `Persistent=true` and user linger catch boots/logins, but a workstation powered down or booted into Windows across an entire shopper edition cannot recover that missing full catalog retrospectively.
+- `spikes/001-pueblo-catalog/research.py` checks the *printed shopper edition* and captures complete `type=shopper` and `type=all` feeds into separate, resumable, checksummed, gitignored folders only when it changes. It compares the new pair with the previous fully compared edition; a nonblocking lock prevents a manual mt03 run from colliding with its timer. A partial crawl, future-dated edition, or edition change mid-crawl is refused. Week comparison JSON does **not** establish a regular price.
+- The October 14 pair was captured and compared on October 15. On October 17 the read-only research job moved to the always-on `menatech03` (`~/pr-shopper-pipeline`), where the four baseline snapshot directories passed checksum and row-count checks, its 19 collector tests passed, and a live same-edition service run produced the 2-edition/0-cutoff report. The mt03 user timer checks Thu/Fri/Sun at 11:00 **UTC** (07:00 AST) and a daily 18:00 UTC timer attempts checksummed, non-deleting sync to mt01; the first sync succeeded. The duplicate mt01 research and one-off pilot timers were disabled, but mt01 still runs the ordinary multi-chain shopper refresh. Neither research job writes to `offers`, the API, user lists, Supabase, or Netlify. `Persistent=true` and user linger help across reboot; the first new-edition capture on mt03 remains to be observed. A missed source edition is a gap, not an inferred snapshot.
 - A missing week is a gap, not silently interpolated history. Keep the raw HTML/page hashes and edition manifests; spot-check a stratified detail sample each new edition for availability, promotion status, pack and price. Shopper absence does not prove non-promo pricing. Store/channel and pickup location remain unverified for physical locations.
 
 ## Evaluation contract
@@ -22,9 +22,9 @@ The 2026-10-13 paired capture returned 20,175 catalog SKUs and 935 shopper SKUs;
 
 ## Commands and release gate
 
-    env -u PYTHONPATH -u PYTHONHOME .venv/bin/python spikes/001-pueblo-catalog/research.py --check
-    env -u PYTHONPATH -u PYTHONHOME .venv/bin/python spikes/001-pueblo-catalog/evaluate.py
-    systemctl --user list-timers pr-shopper-pueblo-research.timer --all
-    journalctl --user -u pr-shopper-pueblo-research.service -n 80 --no-pager
+    ssh gonzalo@100.86.238.102 'cd ~/pr-shopper-pipeline && env -u PYTHONPATH -u PYTHONHOME .venv/bin/python spikes/001-pueblo-catalog/research.py --check'
+    ssh gonzalo@100.86.238.102 'cd ~/pr-shopper-pipeline && env -u PYTHONPATH -u PYTHONHOME .venv/bin/python spikes/001-pueblo-catalog/evaluate.py'
+    ssh gonzalo@100.86.238.102 'systemctl --user list-timers --all pr-shopper-pueblo-research.timer pr-shopper-pueblo-sync.timer'
+    ssh gonzalo@100.86.238.102 'journalctl --user -u pr-shopper-pueblo-research.service -n 80 --no-pager'
 
 Step 5 here means **Sprint 5 prediction research**, not the earlier catalog pilot's step 5. This study is incomplete: no real prediction has been deployed or approved. The owner separately authorized an integrated **demo-only** Netlify release, published 2026-10-13 behind a site-wide visitor-password challenge (unauthenticated `/` and `/app/` returned HTTP 401). The fictional card is a presentation artifact, not scientific validation. Protected-page browser magic-link QA remains owner-run; see `deploy/NETLIFY.md`.

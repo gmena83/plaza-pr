@@ -1,0 +1,12 @@
+[Unit]
+Description=Copy read-only Pueblo study snapshots from mt03 to mt01 when reachable
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+NoNewPrivileges=true
+TimeoutStartSec=10min
+# No --delete: mt01 retains its own archival flyer audit and any other local data.
+# The mt03 timer retries on the next day if mt01 is booted into Windows/offline.
+ExecStart=/usr/bin/rsync -a --checksum --delay-updates --timeout=90 -e "/usr/bin/ssh -o BatchMode=yes -o ConnectTimeout=8" %h/pr-shopper-pipeline/data/catalog-pilots/ gonzalo-mena@100.115.56.118:/home/gonzalo-mena/pr-shopper-pipeline/data/catalog-pilots/

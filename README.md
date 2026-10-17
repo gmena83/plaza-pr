@@ -82,7 +82,7 @@ and the dashboard freshness badge shows staleness.
 | Mi Gente | images | ~135 |
 | Walmart PR | cdn (history) | ~15 |
 
-~5,000+ active offers/week; 8,000+ offers with history.
+As of 2026-10-17 the production `offers` table holds **12,776 advertised-offer rows** from 11 chains, first edition start 2026-09-17; **5,068 rows** were date-valid that day (some overlapping editions). Depth is uneven at 1–5 editions per chain, not a complete quarter of regular prices. A separate read-only archive probe found July–October dated *flyer pages* for several chains, including 14 consecutive Pueblo first-page dates, but no complete historical Pueblo SKU-linked catalog; see `docs/HISTORICAL_SHOPPER_RECON_2026-10-17.md` and `docs/PREDICTION_STUDY.md`.
 
 ## Mi Lista email digest
 

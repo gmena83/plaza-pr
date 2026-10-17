@@ -1,0 +1,1674 @@
+[
+  {
+    "chain": "pueblo",
+    "date": "2026-07-08",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "515713",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "553958",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "526379",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "508028",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "422908",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "473737",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "515454",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "556771",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "pueblo",
+    "date": "2026-07-15",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "457693",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "461222",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "518830",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "499683",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "447168",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "485841",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "540721",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "472283",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "pueblo",
+    "date": "2026-10-14",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "294531",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "333947",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "328277",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "315711",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "288264",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "308065",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "322088",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "329338",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "amigo",
+    "date": "2026-07-09",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "667536",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "616666",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "728817",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "710388",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "585249",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "518492",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "677541",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "613100",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "amigo",
+    "date": "2026-10-15",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "368268",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "337641",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "389861",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "407171",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "327267",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "340382",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "331380",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "369811",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "econo",
+    "date": "2026-07-09",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "718962",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "695194",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "636327",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "743747",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "680327",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "719352",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "731446",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "657021",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "618154",
+        "jpeg": true
+      },
+      {
+        "n": 10,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "540803",
+        "jpeg": true
+      },
+      {
+        "n": 11,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "568950",
+        "jpeg": true
+      },
+      {
+        "n": 12,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "781971",
+        "jpeg": true
+      },
+      {
+        "n": 13,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "494222",
+        "jpeg": true
+      },
+      {
+        "n": 14,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "426643",
+        "jpeg": true
+      },
+      {
+        "n": 15,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "692151",
+        "jpeg": true
+      },
+      {
+        "n": 16,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "672456",
+        "jpeg": true
+      },
+      {
+        "n": 17,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "econo",
+    "date": "2026-10-15",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "432291",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "466513",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "444639",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "405133",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "475947",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "461161",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "469220",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "327405",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "474623",
+        "jpeg": true
+      },
+      {
+        "n": 10,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "437763",
+        "jpeg": true
+      },
+      {
+        "n": 11,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "302548",
+        "jpeg": true
+      },
+      {
+        "n": 12,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "418585",
+        "jpeg": true
+      },
+      {
+        "n": 13,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "386295",
+        "jpeg": true
+      },
+      {
+        "n": 14,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "442474",
+        "jpeg": true
+      },
+      {
+        "n": 15,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "433556",
+        "jpeg": true
+      },
+      {
+        "n": 16,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "201286",
+        "jpeg": true
+      },
+      {
+        "n": 17,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "selectos",
+    "date": "2026-07-09",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "546429",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "565487",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "570733",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "651389",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "371263",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "459735",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "446598",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "606695",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "626072",
+        "jpeg": true
+      },
+      {
+        "n": 10,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "638212",
+        "jpeg": true
+      },
+      {
+        "n": 11,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "634400",
+        "jpeg": true
+      },
+      {
+        "n": 12,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "587175",
+        "jpeg": true
+      },
+      {
+        "n": 13,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "selectos",
+    "date": "2026-10-15",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "306027",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "293809",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "331761",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "366838",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "388393",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "419336",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "344354",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "315628",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "397813",
+        "jpeg": true
+      },
+      {
+        "n": 10,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "341212",
+        "jpeg": true
+      },
+      {
+        "n": 11,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "335708",
+        "jpeg": true
+      },
+      {
+        "n": 12,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "348163",
+        "jpeg": true
+      },
+      {
+        "n": 13,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "ralphs",
+    "date": "2026-07-10",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "724587",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "647633",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "668321",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "694376",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "693594",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "637584",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "575589",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "447841",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "ralphs",
+    "date": "2026-10-16",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "431903",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "427077",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "414869",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "421910",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "426996",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "414291",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "355293",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "440894",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "supermax",
+    "date": "2026-07-08",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "520520",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "616150",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "503020",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "501300",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "386694",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "577130",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "534171",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "435218",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "612527",
+        "jpeg": true
+      },
+      {
+        "n": 10,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "602634",
+        "jpeg": true
+      },
+      {
+        "n": 11,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "592347",
+        "jpeg": true
+      },
+      {
+        "n": 12,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "507739",
+        "jpeg": true
+      },
+      {
+        "n": 13,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "supermax",
+    "date": "2026-10-14",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "345202",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "381360",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "312435",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "298022",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "210451",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "381636",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "427103",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "346029",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "369472",
+        "jpeg": true
+      },
+      {
+        "n": 10,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "385219",
+        "jpeg": true
+      },
+      {
+        "n": 11,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "308844",
+        "jpeg": true
+      },
+      {
+        "n": 12,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "337791",
+        "jpeg": true
+      },
+      {
+        "n": 13,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "mi-gente",
+    "date": "2026-07-09",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "693533",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "588848",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "605291",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "660288",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "705635",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "610919",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "695740",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "694248",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "mi-gente",
+    "date": "2026-10-15",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "510333",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "392034",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "417009",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "444814",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "501949",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "393330",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "531334",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "464604",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "mr-special",
+    "date": "2026-07-02",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "540410",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "577831",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "607281",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "577355",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "574871",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "571906",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "551513",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "526511",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "529444",
+        "jpeg": true
+      },
+      {
+        "n": 10,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "614091",
+        "jpeg": true
+      },
+      {
+        "n": 11,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "601489",
+        "jpeg": true
+      },
+      {
+        "n": 12,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "623149",
+        "jpeg": true
+      },
+      {
+        "n": 13,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "mr-special",
+    "date": "2026-10-08",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "501184",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "353736",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "432614",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "342297",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "402525",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "374566",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "210003",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "302383",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "388426",
+        "jpeg": true
+      },
+      {
+        "n": 10,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "331428",
+        "jpeg": true
+      },
+      {
+        "n": 11,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "346698",
+        "jpeg": true
+      },
+      {
+        "n": 12,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "410517",
+        "jpeg": true
+      },
+      {
+        "n": 13,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "405436",
+        "jpeg": true
+      },
+      {
+        "n": 14,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "332849",
+        "jpeg": true
+      },
+      {
+        "n": 15,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "328059",
+        "jpeg": true
+      },
+      {
+        "n": 16,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "409480",
+        "jpeg": true
+      },
+      {
+        "n": 17,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "agranel",
+    "date": "2026-07-02",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "656821",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "782364",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "621318",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "794984",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "685139",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "746948",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "744478",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "674654",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "agranel",
+    "date": "2026-10-08",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "362878",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "459321",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "435439",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "401731",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "479467",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "510105",
+        "jpeg": true
+      },
+      {
+        "n": 7,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "431445",
+        "jpeg": true
+      },
+      {
+        "n": 8,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "435246",
+        "jpeg": true
+      },
+      {
+        "n": 9,
+        "status": 404
+      }
+    ]
+  },
+  {
+    "chain": "freshmart",
+    "date": "2026-07-01",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "510695",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "621973",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "526174",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "605490",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 429
+      }
+    ]
+  },
+  {
+    "chain": "freshmart",
+    "date": "2026-10-01",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "302249",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "374446",
+        "jpeg": true
+      },
+      {
+        "n": 3,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "334402",
+        "jpeg": true
+      },
+      {
+        "n": 4,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "350839",
+        "jpeg": true
+      },
+      {
+        "n": 5,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "312603",
+        "jpeg": true
+      },
+      {
+        "n": 6,
+        "status": 429
+      }
+    ]
+  },
+  {
+    "chain": "walmart",
+    "date": "2026-07-08",
+    "pages": [
+      {
+        "n": 1,
+        "status": 200,
+        "content_type": "image/jpeg",
+        "length": "442513",
+        "jpeg": true
+      },
+      {
+        "n": 2,
+        "status": 429
+      }
+    ]
+  },
+  {
+    "chain": "walmart",
+    "date": "2026-09-30",
+    "pages": [
+      {
+        "n": 1,
+        "status": 429
+      }
+    ]
+  }
+]

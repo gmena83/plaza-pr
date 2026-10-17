@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily best-effort backup of Pueblo research snapshots to mt01
+
+[Timer]
+OnCalendar=*-*-* 18:00:00 UTC
+Persistent=true
+AccuracySec=1min
+Unit=pr-shopper-pueblo-sync.service
+
+[Install]
+WantedBy=timers.target
