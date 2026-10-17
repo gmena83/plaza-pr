@@ -72,6 +72,16 @@ is a separate release gate.
   token in screenshots, scripts or this repo. If the link loses its session,
   preserve only the URL path and error behavior (not the token hash).
 
+## Pending full release — October 17, 2026
+
+GitHub `main` at `7776f31` is **not** the deployed app: Netlify is a manually published static site and Fly still runs release 9 from October 13. The merged candidate includes password signup/sign-in, Google OAuth UI, market analytics and batch database writes. The owner selected **review and configure all new features for a later full release**, rather than deploying that candidate as-is. At this check, live Supabase Auth reported email enabled, Google **disabled**, signup allowed and email auto-confirmation **enabled**. Publishing the current Google button would lead to a disabled provider; exposing password signup would bypass the previously documented confirmation/recovery/rate-limit and existing-user checks.
+
+The candidate's `/api/analytics/basket_projections` totals take minimum *advertised* sale prices for loosely matched staple names with unequal per-chain coverage, then multiply the current total by 2 and 4. Those numbers are not a validated future-price forecast or comparable full basket; the dashboard's unqualified “Proyección de Canasta Básica” label must not be released as-is. The separate **DATOS FICTICIOS** browser-only illustration remains the only approved projection presentation. Full-release review must cover source/pack comparability, missing items, defensible labels or removal, and chronological evaluation before any real timing prediction.
+
+A pre-release Git bundle of committed repository refs and complete history was made from `7776f31` at `~/Backups/plaza-pr/plaza-pr-20261017-7776f31.bundle` and copied to mt03 at `~/backups/plaza-pr/plaza-pr-20261017-7776f31.bundle`. Both `git bundle verify` checks passed and both SHA-256 digests matched: `2754627a3a89d21ed25889594307f2fb54640c00e859401a8613779f7a8b920d`. This **does not** contain ignored runtime data, environment credentials or the local-only unpublished `docs/PRIVACY_DRAFT.md`. The Pueblo snapshot data have their separate mt03→mt01 daily sync; that is not a full database backup.
+
+**Release gates:** review/fix and test the merged Auth, analytics and batch-write paths; configure Google OAuth through Supabase/Google without recording secrets in this repo; verify email confirmation/recovery and provider redirects through the visitor-password challenge with throwaway accounts; ensure both dashboard copies match; run the full test suite and staging smoke tests; then deploy Fly and the password-gated Netlify static site and read back the exact release, paths and HTTP 401 protection. Keep the current production release in place until these gates pass. The owner-run protected-page magic-link round trip remains unverified.
+
 For future releases: test and review staging; commit/push GitHub; deploy and
 smoke-test Fly; verify Netlify's password challenge; production-deploy static
 files from this directory; read back the exact published deploy and challenge.

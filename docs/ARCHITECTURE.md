@@ -31,7 +31,8 @@ scrapes is offline.
    │  db.py       upsert (idempotent key), dedup_offers, products dim      │
    │  canonicalize.py  conservative VL-typo fixes                          │
    └──────────────────────────────────────────────────────────────────────┘
-       │            everything above runs on menatech01 (needs the GPU)
+       │            production multi-chain extraction above runs on menatech01
+       │            (separate read-only Pueblo catalog study runs on menatech03)
        ▼
    ┌──────────────────────────────────────────────────────────────────────┐
    │        POSTGRES — Supabase (prod)   ·   SQLite db/shopper.db (dev)    │
